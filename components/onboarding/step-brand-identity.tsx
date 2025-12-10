@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { type ChangeEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +58,7 @@ export function StepBrandIdentity({ formData, updateFormData }: StepBrandIdentit
         <Label htmlFor="targetAudience" className="flex"  >Público-Alvo</Label>
         <Textarea
           id="targetAudience"
-          onChange={(e) => updateFormData({ targetAudience: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => updateFormData({ targetAudience: e.target.value })}
           placeholder="Descreva seu público-alvo ideal. Ex: Empreendedores de 25-45 anos interessados em tecnologia..."
           rows={3}
           value={formData.targetAudience}
@@ -97,13 +97,13 @@ export function StepBrandIdentity({ formData, updateFormData }: StepBrandIdentit
           <div className="relative flex-1">
             <input
               className="absolute top-1/2 left-2 size-6 -translate-y-1/2 cursor-pointer border-none bg-transparent"
-              onChange={(e) => setNewColor(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewColor(e.target.value)}
               type="color"
               value={newColor}
             />
             <Input
               className="pl-10"
-              onChange={(e) => setNewColor(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewColor(e.target.value)}
               placeholder="#000000"
               value={newColor}
             />
@@ -122,7 +122,7 @@ export function StepBrandIdentity({ formData, updateFormData }: StepBrandIdentit
         <Label htmlFor="logoUrl" className="flex">URL do Logo (opcional)</Label>
         <Input
           id="logoUrl"
-          onChange={(e) => updateFormData({ logoUrl: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => updateFormData({ logoUrl: e.target.value })}
           placeholder="https://..."
           type="url"
           value={formData.logoUrl}
