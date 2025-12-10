@@ -37,14 +37,31 @@ import {
   vote,
 } from "./schema";
 
+// #region agent log
+console.error("[DEBUG] Initializing database connection, POSTGRES_URL exists:", !!process.env.POSTGRES_URL, "POSTGRES_URL length:", process.env.POSTGRES_URL?.length ?? 0);
+// #endregion
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 export async function getUser(email: string): Promise<User[]> {
+  // #region agent log
+  console.error("[DEBUG] getUser called with email:", email);
+  fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:getUser:entry',message:'getUser called',data:{email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+  // #endregion
   try {
-    return await db.select().from(user).where(eq(user.email, email));
-  } catch (_error) {
+    const result = await db.select().from(user).where(eq(user.email, email));
+    // #region agent log
+    console.error("[DEBUG] getUser success, found users:", result.length);
+    fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:getUser:success',message:'getUser succeeded',data:{email,userCount:result.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    // #endregion
+    return result;
+  } catch (error) {
+    // #region agent log
+    const errorDetails = error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : { raw: String(error) };
+    console.error("[DEBUG] getUser FAILED - Actual error:", JSON.stringify(errorDetails));
+    fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:getUser:error',message:'getUser failed with actual error',data:{email,error:errorDetails},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    // #endregion
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get user by email"
@@ -56,16 +73,30 @@ export async function createUserFromOAuth(
   email: string,
   image_url?: string | null
 ) {
+  // #region agent log
+  console.error("[DEBUG] createUserFromOAuth called with email:", email);
+  fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:createUserFromOAuth:entry',message:'createUserFromOAuth called',data:{email,hasImageUrl:!!image_url},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+  // #endregion
   try {
-    return await db
+    const result = await db
       .insert(user)
-      .values({ email, password: null, image_url })
+      .values({ email, image_url })
       .returning({
         id: user.id,
         email: user.email,
         image_url: user.image_url,
       });
-  } catch (_error) {
+    // #region agent log
+    console.error("[DEBUG] createUserFromOAuth success, created user id:", result[0]?.id);
+    fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:createUserFromOAuth:success',message:'createUserFromOAuth succeeded',data:{email,userId:result[0]?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    // #endregion
+    return result;
+  } catch (error) {
+    // #region agent log
+    const errorDetails = error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : { raw: String(error) };
+    console.error("[DEBUG] createUserFromOAuth FAILED - Actual error:", JSON.stringify(errorDetails));
+    fetch('http://127.0.0.1:7242/ingest/e61e90b4-cddb-4b70-90e5-1497fbde9f03',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:createUserFromOAuth:error',message:'createUserFromOAuth failed with actual error',data:{email,error:errorDetails},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    // #endregion
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to create user from OAuth"

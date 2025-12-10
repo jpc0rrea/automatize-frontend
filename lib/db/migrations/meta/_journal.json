@@ -71,6 +71,13 @@
       "when": 1765314402774,
       "tag": "0009_company_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1765373798846,
+      "tag": "0010_slow_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

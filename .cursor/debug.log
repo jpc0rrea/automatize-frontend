@@ -1,0 +1,10 @@
+{"location":"auth.ts:signIn:entry","message":"signIn callback started","data":{"provider":"google","email":"joaopedro@layback.trade"},"timestamp":1765386104875,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:beforeGetUser","message":"About to call getUser","data":{"email":"joaopedro@layback.trade"},"timestamp":1765386104875,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:getUser:entry","message":"getUser called","data":{"email":"joaopedro@layback.trade"},"timestamp":1765386104876,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:getUser:success","message":"getUser succeeded","data":{"email":"joaopedro@layback.trade","userCount":0},"timestamp":1765386105015,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:afterGetUser","message":"getUser returned","data":{"email":"joaopedro@layback.trade","userCount":0},"timestamp":1765386105016,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:creatingUser","message":"Creating new user","data":{"email":"joaopedro@layback.trade"},"timestamp":1765386105016,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:createUserFromOAuth:entry","message":"createUserFromOAuth called","data":{"email":"joaopedro@layback.trade","hasImageUrl":true},"timestamp":1765386105016,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:createUserFromOAuth:success","message":"createUserFromOAuth succeeded","data":{"email":"joaopedro@layback.trade","userId":"4f8e8968-4d01-49a2-b1c5-afbb3a2f566b"},"timestamp":1765386105078,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:userCreated","message":"New user created","data":{"userId":"4f8e8968-4d01-49a2-b1c5-afbb3a2f566b"},"timestamp":1765386105078,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:success","message":"signIn returning true","data":{"userId":"4f8e8968-4d01-49a2-b1c5-afbb3a2f566b"},"timestamp":1765386105079,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
