@@ -309,7 +309,7 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 2 && (
-            <StepBasicInfo formData={formData} updateFormData={updateFormData} />
+            <StepBasicInfo formData={formData} isInstagramConnected={isInstagramConnected} updateFormData={updateFormData} />
           )}
           {currentStep === 3 && (
             <StepExtraction

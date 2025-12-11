@@ -8,9 +8,10 @@ import type { OnboardingFormData } from "./types";
 type StepBasicInfoProps = {
   formData: OnboardingFormData;
   updateFormData: (data: Partial<OnboardingFormData>) => void;
+  isInstagramConnected?: boolean;
 };
 
-export function StepBasicInfo({ formData, updateFormData }: StepBasicInfoProps) {
+export function StepBasicInfo({ formData, updateFormData, isInstagramConnected = false }: StepBasicInfoProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -55,6 +56,7 @@ export function StepBasicInfo({ formData, updateFormData }: StepBasicInfoProps) 
           </span>
           <Input
             className="pl-7"
+            disabled={isInstagramConnected}
             id="instagramHandle"
             onChange={(e) =>
               updateFormData({ instagramHandle: e.target.value.replace("@", "") })
@@ -64,7 +66,9 @@ export function StepBasicInfo({ formData, updateFormData }: StepBasicInfoProps) 
           />
         </div>
         <p className="text-muted-foreground text-xs">
-          Informe o Instagram da sua empresa para referência
+          {isInstagramConnected 
+            ? "Instagram conectado na etapa anterior" 
+            : "Informe o Instagram da sua empresa para referência"}
         </p>
       </div>
     </div>
