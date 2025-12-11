@@ -2,8 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "./lib/constants";
 
-// Paths that should skip onboarding check
-const skipOnboardingPaths = ["/onboarding", "/settings", "/api/company", "/api/files", "/api/auth", "/api/meta-business", "/api/instagram-account", "/login"];
+// Paths that should skip onboarding check (for authenticated users)
+// Note: /api/auth, /api/meta-business, /api/instagram-account bypass auth entirely (handled earlier)
+const skipOnboardingPaths = ["/onboarding", "/settings", "/api/company", "/api/files", "/login"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,8 +21,14 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
-  if (pathname.startsWith("/api/auth")) {
-    console.log("TODELETE: proxy - Skipping /api/auth path");
+  // Skip authentication for auth, meta-business, and instagram-account API routes
+  // These paths receive unauthenticated requests (OAuth callbacks, webhook verification)
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/meta-business") ||
+    pathname.startsWith("/api/instagram-account")
+  ) {
+    console.log("TODELETE: proxy - Skipping auth check for path:", pathname);
     return NextResponse.next();
   }
 
