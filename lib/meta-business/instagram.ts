@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import axios from "axios";
 
 // Instagram Business Login configuration
 const INSTAGRAM_GRAPH_URL = "https://graph.instagram.com";
@@ -70,64 +69,61 @@ export async function exchangeCodeForToken(code: string): Promise<{
     codeLength: code.length,
   });
 
-  try {
-    console.log(
-      "TODELETE: exchangeCodeForToken - Making request to Instagram token endpoint"
-    );
-    console.log("TODELETE: exchangeCodeForToken - Using redirectUri:", redirectUri);
-    console.log("TODELETE: exchangeCodeForToken - Using appId:", appId);
+  console.log(
+    "TODELETE: exchangeCodeForToken - Making request to Instagram token endpoint"
+  );
+  console.log("TODELETE: exchangeCodeForToken - Using redirectUri:", redirectUri);
+  console.log("TODELETE: exchangeCodeForToken - Using appId:", appId);
 
-    const response = await axios.post(
-      INSTAGRAM_TOKEN_URL,
-      new URLSearchParams({
-        client_id: appId,
-        client_secret: appSecret,
-        grant_type: "authorization_code",
-        redirect_uri: redirectUri,
-        code,
-      }),
+  const response = await fetch(INSTAGRAM_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: appId,
+      client_secret: appSecret,
+      grant_type: "authorization_code",
+      redirect_uri: redirectUri,
+      code,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error(
+      "TODELETE: exchangeCodeForToken - Error during token exchange"
+    );
+    console.error(
+      "TODELETE: exchangeCodeForToken - Response status:",
+      response.status
+    );
+    console.error(
+      "TODELETE: exchangeCodeForToken - Response data:",
+      JSON.stringify(data, null, 2)
+    );
+    console.error(
+      "TODELETE: exchangeCodeForToken - Request config:",
       {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        url: INSTAGRAM_TOKEN_URL,
+        redirectUri,
+        appId,
       }
     );
-
-    console.log("TODELETE: exchangeCodeForToken - Token exchange successful");
-    console.log("TODELETE: exchangeCodeForToken - User ID:", {
-      userId: response.data.user_id,
-      responseData: response.data,
-    });
-
-    return {
-      access_token: response.data.access_token,
-      user_id: response.data.user_id.toString(),
-    };
-  } catch (error) {
-    console.error(
-      "TODELETE: exchangeCodeForToken - Error during token exchange:",
-      error
-    );
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "TODELETE: exchangeCodeForToken - Response status:",
-        error.response?.status
-      );
-      console.error(
-        "TODELETE: exchangeCodeForToken - Response data:",
-        JSON.stringify(error.response?.data, null, 2)
-      );
-      console.error(
-        "TODELETE: exchangeCodeForToken - Request config:",
-        {
-          url: error.config?.url,
-          redirectUri,
-          appId,
-        }
-      );
-    }
-    throw error;
+    throw new Error(data.error_message ?? "Failed to exchange code for token");
   }
+
+  console.log("TODELETE: exchangeCodeForToken - Token exchange successful");
+  console.log("TODELETE: exchangeCodeForToken - User ID:", {
+    userId: data.user_id,
+    responseData: data,
+  });
+
+  return {
+    access_token: data.access_token,
+    user_id: data.user_id.toString(),
+  };
 }
 
 /**
@@ -142,10 +138,15 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   
   const { appSecret } = getInstagramConfig();
 
+  const url = new URL(INSTAGRAM_LONG_LIVED_TOKEN_URL);
+  url.searchParams.set("grant_type", "ig_exchange_token");
+  url.searchParams.set("client_secret", appSecret);
+  url.searchParams.set("access_token", shortLivedToken);
+
   console.log(
     "TODELETE: getLongLivedToken - Starting long-lived token exchange",
     {
-      url: INSTAGRAM_LONG_LIVED_TOKEN_URL,
+      url: url.toString(),
       params: {
         grant_type: "ig_exchange_token",
         client_secret: appSecret,
@@ -153,43 +154,32 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
       },
     }
   );
-  
-  try {
-    const response = await axios.get(INSTAGRAM_LONG_LIVED_TOKEN_URL, {
-      params: {
-        grant_type: "ig_exchange_token",
-        client_secret: appSecret,
-        access_token: shortLivedToken,
-      },
-    });
 
-    console.log(
-      "TODELETE: getLongLivedToken - Long-lived token obtained successfully"
-    );
-    console.log(
-      "TODELETE: getLongLivedToken - Expires in:",
-      response.data.expires_in,
-      "seconds"
-    );
+  const response = await fetch(url);
+  const data = await response.json();
 
-    return {
-      access_token: response.data.access_token,
-      token_type: response.data.token_type,
-      expires_in: response.data.expires_in,
-    };
-  } catch (error) {
+  if (!response.ok) {
     console.error(
-      "TODELETE: getLongLivedToken - Error getting long-lived token:",
-      error
+      "TODELETE: getLongLivedToken - Error getting long-lived token"
     );
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "TODELETE: getLongLivedToken - Response data:",
-        error.response?.data
-      );
-    }
-    throw error;
+    console.error("TODELETE: getLongLivedToken - Response data:", data);
+    throw new Error(data.error?.message ?? "Failed to get long-lived token");
   }
+
+  console.log(
+    "TODELETE: getLongLivedToken - Long-lived token obtained successfully"
+  );
+  console.log(
+    "TODELETE: getLongLivedToken - Expires in:",
+    data.expires_in,
+    "seconds"
+  );
+
+  return {
+    access_token: data.access_token,
+    token_type: data.token_type,
+    expires_in: data.expires_in,
+  };
 }
 
 /**
@@ -203,41 +193,35 @@ export async function refreshLongLivedToken(currentToken: string): Promise<{
 }> {
   console.log("TODELETE: refreshLongLivedToken - Starting token refresh");
 
-  try {
-    const response = await axios.get(INSTAGRAM_LONG_LIVED_TOKEN_URL, {
-      params: {
-        grant_type: "ig_refresh_token",
-        access_token: currentToken,
-      },
-    });
+  const url = new URL(INSTAGRAM_LONG_LIVED_TOKEN_URL);
+  url.searchParams.set("grant_type", "ig_refresh_token");
+  url.searchParams.set("access_token", currentToken);
 
-    console.log(
-      "TODELETE: refreshLongLivedToken - Token refreshed successfully"
-    );
-    console.log(
-      "TODELETE: refreshLongLivedToken - New expiry:",
-      response.data.expires_in,
-      "seconds"
-    );
+  const response = await fetch(url);
+  const data = await response.json();
 
-    return {
-      access_token: response.data.access_token,
-      token_type: response.data.token_type,
-      expires_in: response.data.expires_in,
-    };
-  } catch (error) {
+  if (!response.ok) {
     console.error(
-      "TODELETE: refreshLongLivedToken - Error refreshing token:",
-      error
+      "TODELETE: refreshLongLivedToken - Error refreshing token"
     );
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "TODELETE: refreshLongLivedToken - Response data:",
-        error.response?.data
-      );
-    }
-    throw error;
+    console.error("TODELETE: refreshLongLivedToken - Response data:", data);
+    throw new Error(data.error?.message ?? "Failed to refresh token");
   }
+
+  console.log(
+    "TODELETE: refreshLongLivedToken - Token refreshed successfully"
+  );
+  console.log(
+    "TODELETE: refreshLongLivedToken - New expiry:",
+    data.expires_in,
+    "seconds"
+  );
+
+  return {
+    access_token: data.access_token,
+    token_type: data.token_type,
+    expires_in: data.expires_in,
+  };
 }
 
 /**
@@ -259,40 +243,24 @@ export async function getUserProfile(
     endpoint: `${INSTAGRAM_GRAPH_URL}/${userId}`,
   });
 
-  try {
-    const meResponse = await axios.get(`${INSTAGRAM_GRAPH_URL}/me`, {
-      params: {
-        fields: "id,username,account_type,media_count",
-        access_token: accessToken,
-      },
-    });
+  const url = new URL(`${INSTAGRAM_GRAPH_URL}/me`);
+  url.searchParams.set("fields", "id,username,account_type,media_count");
+  url.searchParams.set("access_token", accessToken);
 
-    console.log("TODELETE: getUserProfile - Me response:", meResponse.data);
+  const response = await fetch(url);
+  const data = await response.json();
 
-    // const response = await axios.get(`${INSTAGRAM_GRAPH_URL}/${id}`, {
-    //   params: {
-    //     fields: "id,username,account_type,media_count",
-    //     access_token: accessToken,
-    //   },
-    // });
-
-    console.log("TODELETE: getUserProfile - Profile fetched successfully");
-    console.log(
-      "TODELETE: getUserProfile - Username:",
-      meResponse.data.username
-    );
-
-    return meResponse.data;
-  } catch (error) {
-    console.error("TODELETE: getUserProfile - Error fetching profile:", error);
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "TODELETE: getUserProfile - Response data:",
-        error.response?.data
-      );
-    }
-    throw error;
+  if (!response.ok) {
+    console.error("TODELETE: getUserProfile - Error fetching profile");
+    console.error("TODELETE: getUserProfile - Response data:", data);
+    throw new Error(data.error?.message ?? "Failed to get user profile");
   }
+
+  console.log("TODELETE: getUserProfile - Me response:", data);
+  console.log("TODELETE: getUserProfile - Profile fetched successfully");
+  console.log("TODELETE: getUserProfile - Username:", data.username);
+
+  return data;
 }
 
 /**
@@ -313,35 +281,33 @@ export async function subscribeToWebhooks(
     subscribedFields.join(", ")
   );
 
-  try {
-    const response = await axios.post(
-      `${INSTAGRAM_GRAPH_URL}/${userId}/subscribed_apps`,
-      new URLSearchParams({
+  const response = await fetch(
+    `${INSTAGRAM_GRAPH_URL}/${userId}/subscribed_apps`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
         subscribed_fields: subscribedFields.join(","),
         access_token: accessToken,
       }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    console.log(
-      "TODELETE: subscribeToWebhooks - Subscription successful:",
-      response.data
-    );
-    return response.data.success === true;
-  } catch (error) {
-    console.error("TODELETE: subscribeToWebhooks - Error subscribing:", error);
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "TODELETE: subscribeToWebhooks - Response data:",
-        error.response?.data
-      );
     }
-    throw error;
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("TODELETE: subscribeToWebhooks - Error subscribing");
+    console.error("TODELETE: subscribeToWebhooks - Response data:", data);
+    throw new Error(data.error?.message ?? "Failed to subscribe to webhooks");
   }
+
+  console.log(
+    "TODELETE: subscribeToWebhooks - Subscription successful:",
+    data
+  );
+  return data.success === true;
 }
 
 /**
