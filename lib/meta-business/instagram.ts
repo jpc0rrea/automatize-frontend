@@ -229,7 +229,6 @@ export async function refreshLongLivedToken(currentToken: string): Promise<{
  */
 export async function getUserProfile(
   accessToken: string,
-  userId: string
 ): Promise<{
   id: string;
   username: string;
@@ -237,10 +236,8 @@ export async function getUserProfile(
   media_count?: number;
 }> {
   console.log("TODELETE: getUserProfile - Fetching user profile for ID:", {
-    userId,
     accessToken,
     fields: "id,username,account_type,media_count",
-    endpoint: `${INSTAGRAM_GRAPH_URL}/${userId}`,
   });
 
   const url = new URL(`${INSTAGRAM_GRAPH_URL}/me`);

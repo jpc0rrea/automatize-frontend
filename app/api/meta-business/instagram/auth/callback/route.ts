@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     console.log(
       "TODELETE: /api/instagram/auth/callback GET - Step 1: Exchanging code for token"
     );
-    const { access_token: shortLivedToken, user_id: instagramUserId } =
+    const { access_token: shortLivedToken, user_id: oldInstagramUserIdWEDONOTUSETHIS } =
       await exchangeCodeForToken(code);
 
     console.log(
@@ -106,8 +106,9 @@ export async function GET(request: Request) {
     );
     console.log(
       "TODELETE: /api/instagram/auth/callback GET - Instagram User ID:",
-      instagramUserId
+      oldInstagramUserIdWEDONOTUSETHIS
     );
+
 
     // Step 2: Exchange short-lived token for long-lived token
     console.log(
@@ -136,7 +137,7 @@ export async function GET(request: Request) {
     console.log(
       "TODELETE: /api/instagram/auth/callback GET - Step 3: Fetching user profile"
     );
-    const profile = await getUserProfile(longLivedToken, instagramUserId);
+    const profile = await getUserProfile(longLivedToken);
 
     console.log("TODELETE: /api/instagram/auth/callback GET - Profile fetched");
     console.log(
@@ -177,6 +178,9 @@ export async function GET(request: Request) {
       "TODELETE: /api/instagram/auth/callback GET - Upserting Instagram account for user:",
       userId
     );
+
+    const instagramUserId = profile.id;
+
 
     // Check if account already exists
     const existingAccounts = await db
