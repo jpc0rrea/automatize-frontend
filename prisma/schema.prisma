@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String    @id @default(cuid())
+  name       String
+  email      String    @unique
+  password   String
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  instagramAccounts InstagramAccount[]
+  scheduledPosts    ScheduledPost[]
+
+  @@map("users")
+}
+
+model InstagramAccount {
+  id               String    @id @default(cuid())
+  user_id          String
+  account_id       String
+  username         String?
+  access_token     String
+  token_expires_at DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  deleted_at       DateTime?
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, account_id])
+  @@map("instagram_accounts")
+}
+
+model ScheduledPost {
+  id                     String    @id @default(cuid())
+  user_id                String
+  media_url              String
+  media_type             String?
+  caption                String
+  location_id            String?
+  user_tags_json         String?
+  scheduled_at           DateTime
+  status                 String    @default("pending")
+  retry_attempts         Int       @default(0)
+  last_attempt_at        DateTime?
+  last_error_message     String?
+  media_container_id     String?   @unique
+  media_container_status String?
+  published_at           DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  deleted_at             DateTime?
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("scheduled_posts")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  origin_url  String
+  default_url String?
+  description String?   @db.Text
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+
+  clicks Click[]
+
+  @@map("products")
+}
+
+model Click {
+  click_id       String    @id
+  product_id     String
+  device_id      String
+  ip_address     String?
+  user_agent     String?
+  referrer       String?
+  unix_timestamp BigInt
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+
+  product      Product           @relation(fields: [product_id], references: [id])
+  cookies      ClickCookie[]
+  query_params ClickQueryParam[]
+
+  @@map("clicks")
+}
+
+model ClickCookie {
+  id           Int       @id @default(autoincrement())
+  click_id     String
+  cookie_name  String
+  cookie_value String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  deleted_at   DateTime?
+
+  click Click @relation(fields: [click_id], references: [click_id])
+
+  @@index([click_id])
+  @@map("click_cookies")
+}
+
+model ClickQueryParam {
+  id          Int       @id @default(autoincrement())
+  click_id    String
+  param_name  String
+  param_value String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+
+  click Click @relation(fields: [click_id], references: [click_id])
+
+  @@index([click_id])
+  @@map("click_query_params")
+}
+
+model ErrorLog {
+  error_id           String    @id @default(cuid())
+  error_message      String?
+  error_stack        String?   @db.Text
+  error_timestamp    DateTime  @default(now())
+  error_type         String?
+  error_level        String?
+  error_source       String?
+  error_location     String?
+  error_device_id    String?
+  error_ip_address   String?
+  error_user_agent   String?
+  error_referrer     String?
+  error_query_params Json?
+  error_cookies      Json?
+  error_click_id     String?
+  error_product_id   String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  deleted_at         DateTime?
+
+  @@map("error_logs")
+}
+
+model AuthSession {
+  id                 String    @id @default(cuid())
+  session_token_hash String    @unique
+  username           String
+  ip_address         String?
+  user_agent         String?
+  expires_at         DateTime
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  deleted_at         DateTime?
+
+  @@map("auth_sessions")
+}
