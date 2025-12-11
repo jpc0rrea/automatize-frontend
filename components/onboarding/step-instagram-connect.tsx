@@ -1,8 +1,9 @@
 "use client";
 
 import { CheckCircle2, Instagram, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 
 type InstagramAccount = {
   username: string;
@@ -29,6 +30,7 @@ function buildInstagramAuthUrl(): string {
   const redirectUri = process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
+    // eslint-disable-next-line no-console
     console.error("Missing Instagram OAuth configuration");
     return "#";
   }
@@ -49,11 +51,6 @@ export function StepInstagramConnect({
   connectedAccount,
   isLoading,
 }: StepInstagramConnectProps) {
-  const handleConnect = () => {
-    // Redirect directly to Instagram OAuth page
-    window.location.href = buildInstagramAuthUrl();
-  };
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -92,18 +89,19 @@ export function StepInstagramConnect({
         Para começar, conecte a conta do Instagram da sua empresa. Isso nos permitirá 
         entender melhor seu conteúdo e ajudar a criar posts incríveis.
       </p>
-      <Button
-        className={cn(
-          "mt-6 gap-2",
+      <Button 
+      asChild
+      className={cn(
+          "mt-6 gap-2 inline-flex items-center justify-center rounded-md px-6 py-3",
           "bg-linear-to-r from-purple-500 via-pink-500 to-orange-400",
           "hover:from-purple-600 hover:via-pink-600 hover:to-orange-500",
-          "text-white"
+          "text-white font-medium text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-pink-500"
         )}
-        onClick={handleConnect}
-        size="lg"
       >
-        <Instagram className="size-5" />
-        Conectar Instagram
+        <Link href={buildInstagramAuthUrl()} className="text-sm">
+          <Instagram className="size-5" />
+          Conectar Instagram
+        </Link>
       </Button>
       <p className="mt-4 max-w-sm text-center text-muted-foreground text-xs">
         Você será redirecionado para o Instagram para autorizar o acesso. 

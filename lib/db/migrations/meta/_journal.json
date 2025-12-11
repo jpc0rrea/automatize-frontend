@@ -8,6 +8,13 @@
       "when": 1765388948038,
       "tag": "0000_sweet_kid_colt",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765459887350,
+      "tag": "0001_cute_gladiator",
+      "breakpoints": true
     }
   ]
 }

@@ -15,15 +15,6 @@ export default function Page() {
 
         <div className="flex flex-col gap-4 px-4 sm:px-16">
           <GoogleSignInButton />
-          {/* TODELETE Instagram Business Login */}
-          <button 
-          type="button"
-          className="w-full bg-blue-500 text-white p-2 rounded-md"
-          onClick={() => {
-            console.log("TODELETE: Instagram Business Login button clicked");
-          }}>
-            Entrar com Instagram
-          </button>
         </div>
       </div>
     </div>

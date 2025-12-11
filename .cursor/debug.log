@@ -15,3 +15,10 @@
 {"location":"auth.ts:signIn:afterGetUser","message":"getUser returned","data":{"email":"joaopedrocorrea14@gmail.com","userCount":1},"timestamp":1765457726867,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
 {"location":"auth.ts:signIn:existingUser","message":"Existing user found","data":{"userId":"40479526-a4df-46be-aac1-463b45ee487f"},"timestamp":1765457726867,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
 {"location":"auth.ts:signIn:success","message":"signIn returning true","data":{"userId":"40479526-a4df-46be-aac1-463b45ee487f"},"timestamp":1765457726867,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:entry","message":"signIn callback started","data":{"provider":"google","email":"joaopedro@layback.trade"},"timestamp":1765460131625,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:beforeGetUser","message":"About to call getUser","data":{"email":"joaopedro@layback.trade"},"timestamp":1765460131626,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:getUser:entry","message":"getUser called","data":{"email":"joaopedro@layback.trade"},"timestamp":1765460131626,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"queries.ts:getUser:success","message":"getUser succeeded","data":{"email":"joaopedro@layback.trade","userCount":1},"timestamp":1765460131666,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:afterGetUser","message":"getUser returned","data":{"email":"joaopedro@layback.trade","userCount":1},"timestamp":1765460131666,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:existingUser","message":"Existing user found","data":{"userId":"801039b5-8c6e-4fd5-bc08-d42a6ee9ed81"},"timestamp":1765460131667,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
+{"location":"auth.ts:signIn:success","message":"signIn returning true","data":{"userId":"801039b5-8c6e-4fd5-bc08-d42a6ee9ed81"},"timestamp":1765460131667,"sessionId":"debug-session","hypothesisId":"A,B,C,D,E"}
