@@ -63,10 +63,19 @@ export async function exchangeCodeForToken(code: string): Promise<{
 
   const { appId, appSecret, redirectUri } = getInstagramConfig();
 
+  console.log("TODELETE: exchangeCodeForToken - Config loaded:", {
+    appId,
+    redirectUri,
+    hasAppSecret: !!appSecret,
+    codeLength: code.length,
+  });
+
   try {
     console.log(
       "TODELETE: exchangeCodeForToken - Making request to Instagram token endpoint"
     );
+    console.log("TODELETE: exchangeCodeForToken - Using redirectUri:", redirectUri);
+    console.log("TODELETE: exchangeCodeForToken - Using appId:", appId);
 
     const response = await axios.post(
       INSTAGRAM_TOKEN_URL,
@@ -101,8 +110,20 @@ export async function exchangeCodeForToken(code: string): Promise<{
     );
     if (axios.isAxiosError(error)) {
       console.error(
+        "TODELETE: exchangeCodeForToken - Response status:",
+        error.response?.status
+      );
+      console.error(
         "TODELETE: exchangeCodeForToken - Response data:",
-        error.response?.data
+        JSON.stringify(error.response?.data, null, 2)
+      );
+      console.error(
+        "TODELETE: exchangeCodeForToken - Request config:",
+        {
+          url: error.config?.url,
+          redirectUri,
+          appId,
+        }
       );
     }
     throw error;
