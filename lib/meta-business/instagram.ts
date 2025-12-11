@@ -139,12 +139,21 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   token_type: string;
   expires_in: number;
 }> {
-  console.log(
-    "TODELETE: getLongLivedToken - Starting long-lived token exchange"
-  );
-
+  
   const { appSecret } = getInstagramConfig();
 
+  console.log(
+    "TODELETE: getLongLivedToken - Starting long-lived token exchange",
+    {
+      url: INSTAGRAM_LONG_LIVED_TOKEN_URL,
+      params: {
+        grant_type: "ig_exchange_token",
+        client_secret: appSecret,
+        access_token: shortLivedToken,
+      },
+    }
+  );
+  
   try {
     const response = await axios.get(INSTAGRAM_LONG_LIVED_TOKEN_URL, {
       params: {
