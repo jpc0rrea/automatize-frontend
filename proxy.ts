@@ -3,10 +3,14 @@ import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "./lib/constants";
 
 // Paths that should skip onboarding check
-const skipOnboardingPaths = ["/onboarding", "/settings", "/api/company", "/api/files", "/api/auth", "/login"];
+const skipOnboardingPaths = ["/onboarding", "/settings", "/api/company", "/api/files", "/api/auth", "/api/meta-business", "/api/instagram-account", "/login"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // #region agent log - Debug middleware flow
+  console.log("TODELETE: proxy - Processing request:", pathname);
+  // #endregion
 
   /*
    * Playwright starts the dev server and requires a 200 status to
@@ -17,6 +21,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/auth")) {
+    console.log("TODELETE: proxy - Skipping /api/auth path");
     return NextResponse.next();
   }
 
@@ -38,6 +43,7 @@ export async function proxy(request: NextRequest) {
 
   // Skip onboarding check for certain paths
   if (skipOnboardingPaths.some((path) => pathname.startsWith(path))) {
+    console.log("TODELETE: proxy - Skipping onboarding check for path:", pathname);
     return NextResponse.next();
   }
 
