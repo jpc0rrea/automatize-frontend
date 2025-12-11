@@ -9,14 +9,14 @@ const INSTAGRAM_LONG_LIVED_TOKEN_URL = `${INSTAGRAM_GRAPH_URL}/access_token`;
 
 // Environment variables
 function getInstagramConfig() {
-  const appId = process.env.INSTAGRAM_APP_ID;
+  const appId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID;
   const appSecret = process.env.INSTAGRAM_APP_SECRET;
-  const redirectUri = process.env.INSTAGRAM_REDIRECT_URI;
+  const redirectUri = process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI;
   const webhookVerifyToken = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
 
   if (!appId || !appSecret || !redirectUri) {
     throw new Error(
-      "Missing Instagram configuration. Please set INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, and INSTAGRAM_REDIRECT_URI environment variables."
+      "Missing Instagram configuration. Please set NEXT_PUBLIC_INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, and NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI environment variables."
     );
   }
 
@@ -36,8 +36,9 @@ export function generateAuthUrl(state?: string): string {
     client_id: appId,
     redirect_uri: redirectUri,
     scope:
-      "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish",
+      "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish,instagram_business_manage_insights",
     response_type: "code",
+    force_reauth: "true",
     ...(state && { state }),
   });
 

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { and, eq, isNull } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { auth } from "@/app/(auth)/auth";
+import { instagramAccount } from "@/lib/db/schema";
 import {
   exchangeCodeForToken,
   getLongLivedToken,
@@ -7,6 +12,11 @@ import {
   subscribeToWebhooks,
   ALL_WEBHOOK_FIELDS,
 } from "@/lib/meta-business/instagram";
+
+// Initialize database connection
+// biome-ignore lint: Forbidden non-null assertion.
+const client = postgres(process.env.POSTGRES_URL!);
+const db = drizzle(client);
 
 /**
  * GET /api/instagram/auth/callback
@@ -50,15 +60,15 @@ export async function GET(request: Request) {
         errorDescription
       );
 
-      return NextResponse.json(
-        {
-          error: "Instagram authorization failed",
-          error_code: error,
-          error_reason: errorReason,
-          error_description: errorDescription,
-        },
-        { status: 400 }
+      // Redirect to onboarding with error parameter
+      const redirectUrl = new URL("/onboarding", request.url);
+      redirectUrl.searchParams.set("instagram_error", "true");
+      redirectUrl.searchParams.set(
+        "error_message",
+        errorDescription ?? errorReason ?? "Authorization failed"
       );
+
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Get the authorization code
@@ -75,10 +85,13 @@ export async function GET(request: Request) {
       console.log(
         "TODELETE: /api/instagram/auth/callback GET - No authorization code received"
       );
-      return NextResponse.json(
-        { error: "Authorization code is required" },
-        { status: 400 }
-      );
+      
+      // Redirect to onboarding with error parameter
+      const redirectUrl = new URL("/onboarding", request.url);
+      redirectUrl.searchParams.set("instagram_error", "true");
+      redirectUrl.searchParams.set("error_message", "Authorization code is required");
+
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Step 1: Exchange code for short-lived token
@@ -136,59 +149,28 @@ export async function GET(request: Request) {
     );
 
     // Step 4: Store/update the Instagram account in the database
-    // Note: For now, we'll create a temporary user if state doesn't contain user_id
-    // In a real implementation, you'd get the user_id from the state or session
     console.log(
       "TODELETE: /api/instagram/auth/callback GET - Step 4: Storing Instagram account in database"
     );
 
-    let userId = state; // Assuming state contains the user_id
+    // Get the authenticated user from the session
+    const session = await auth();
 
-    // If no user_id in state, try to find an existing user with this Instagram account
-    // or create a placeholder user
-    if (!userId) {
+    if (!session?.user?.id) {
       console.log(
-        "TODELETE: /api/instagram/auth/callback GET - No user_id in state, looking for existing account"
+        "TODELETE: /api/instagram/auth/callback GET - No authenticated user found"
       );
-
-      const existingAccount = await prisma.instagramAccount.findFirst({
-        where: {
-          account_id: instagramUserId,
-          deleted_at: null,
-        },
-      });
-
-      if (existingAccount) {
-        userId = existingAccount.user_id;
-        console.log(
-          "TODELETE: /api/instagram/auth/callback GET - Found existing account for user:",
-          userId
-        );
-      } else {
-        // For demonstration, return the data without saving
-        // In production, you'd handle user creation or require authentication
-        console.log(
-          "TODELETE: /api/instagram/auth/callback GET - No existing account found"
-        );
-        console.log(
-          "TODELETE: /api/instagram/auth/callback GET - Returning data without saving (no user context)"
-        );
-
-        return NextResponse.json({
-          success: true,
-          message:
-            "Instagram authorization successful. No user context available for storage.",
-          instagram_account: {
-            account_id: profile.id,
-            username: profile.username,
-            account_type: profile.account_type,
-            media_count: profile.media_count,
-          },
-          token_expires_at: tokenExpiresAt.toISOString(),
-          note: "Pass a user_id in the state parameter to store the account automatically.",
-        });
-      }
+      
+      // Redirect to login if not authenticated
+      const redirectUrl = new URL("/login", request.url);
+      return NextResponse.redirect(redirectUrl);
     }
+
+    const userId = session.user.id;
+    console.log(
+      "TODELETE: /api/instagram/auth/callback GET - Authenticated user:",
+      userId
+    );
 
     // Upsert the Instagram account
     console.log(
@@ -196,32 +178,60 @@ export async function GET(request: Request) {
       userId
     );
 
-    const instagramAccount = await prisma.instagramAccount.upsert({
-      where: {
-        user_id_account_id: {
-          user_id: userId,
-          account_id: instagramUserId,
-        },
-      },
-      update: {
-        access_token: longLivedToken,
-        username: profile.username,
-        token_expires_at: tokenExpiresAt,
-        updated_at: new Date(),
-        deleted_at: null, // Restore if was soft deleted
-      },
-      create: {
-        user_id: userId,
-        account_id: instagramUserId,
-        username: profile.username,
-        access_token: longLivedToken,
-        token_expires_at: tokenExpiresAt,
-      },
-    });
+    // Check if account already exists
+    const existingAccounts = await db
+      .select()
+      .from(instagramAccount)
+      .where(
+        and(
+          eq(instagramAccount.userId, userId),
+          eq(instagramAccount.accountId, instagramUserId)
+        )
+      )
+      .limit(1);
+
+    const existingAccountRecord = existingAccounts[0];
+
+    let accountRecord;
+    if (existingAccountRecord) {
+      // Update existing account
+      const updatedAccounts = await db
+        .update(instagramAccount)
+        .set({
+          accessToken: longLivedToken,
+          username: profile.username ?? null,
+          tokenExpiresAt: tokenExpiresAt,
+          updatedAt: new Date(),
+          deletedAt: null, // Restore if was soft deleted
+        })
+        .where(eq(instagramAccount.id, existingAccountRecord.id))
+        .returning();
+
+      accountRecord = updatedAccounts[0];
+    } else {
+      // Create new account
+      // Generate a unique ID using nanoid (similar to cuid)
+      const accountId = nanoid();
+      const createdAccounts = await db
+        .insert(instagramAccount)
+        .values({
+          id: accountId,
+          userId: userId,
+          accountId: instagramUserId,
+          username: profile.username ?? null,
+          accessToken: longLivedToken,
+          tokenExpiresAt: tokenExpiresAt,
+        })
+        .returning();
+
+      accountRecord = createdAccounts[0];
+    }
+
+    const instagramAccountRecord = accountRecord;
 
     console.log(
       "TODELETE: /api/instagram/auth/callback GET - Instagram account saved:",
-      instagramAccount.id
+      instagramAccountRecord.id
     );
 
     // Step 5: Subscribe to webhooks
@@ -251,27 +261,23 @@ export async function GET(request: Request) {
       "TODELETE: /api/instagram/auth/callback GET - OAuth flow completed successfully"
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "Instagram account connected successfully",
-      instagram_account: {
-        id: instagramAccount.id,
-        account_id: instagramUserId,
-        username: profile.username,
-        account_type: profile.account_type,
-        media_count: profile.media_count,
-      },
-      token_expires_at: tokenExpiresAt.toISOString(),
-    });
+    // Redirect to onboarding with success parameter
+    const redirectUrl = new URL("/onboarding", request.url);
+    redirectUrl.searchParams.set("instagram_connected", "true");
+    redirectUrl.searchParams.set("username", profile.username ?? "");
+
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error("TODELETE: /api/instagram/auth/callback GET - Error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to complete Instagram authorization. Please try again.",
-        details: error instanceof Error ? error.message : undefined,
-      },
-      { status: 500 }
+    // Redirect to onboarding with error parameter
+    const redirectUrl = new URL("/onboarding", request.url);
+    redirectUrl.searchParams.set("instagram_error", "true");
+    redirectUrl.searchParams.set(
+      "error_message",
+      error instanceof Error ? error.message : "Failed to connect Instagram"
     );
+
+    return NextResponse.redirect(redirectUrl);
   }
 }

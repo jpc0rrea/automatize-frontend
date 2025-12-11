@@ -1,3 +1,4 @@
+export { StepInstagramConnect } from "./step-instagram-connect";
 export { StepBasicInfo } from "./step-basic-info";
 export { StepExtraction } from "./step-extraction";
 export { StepBrandIdentity } from "./step-brand-identity";

@@ -8,6 +8,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -197,3 +198,29 @@ export const companyReferenceImage = pgTable("company_reference_image", {
 export type CompanyReferenceImage = InferSelectModel<
   typeof companyReferenceImage
 >;
+
+// Instagram Account table for storing Instagram account connections
+export const instagramAccount = pgTable(
+  "instagram_accounts",
+  {
+    id: text("id").primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id),
+    accountId: text("account_id").notNull(),
+    username: text("username"),
+    accessToken: text("access_token").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => ({
+    uniqueUserAccount: unique("instagram_accounts_user_id_account_id_unique").on(
+      table.userId,
+      table.accountId
+    ),
+  })
+);
+
+export type InstagramAccount = InferSelectModel<typeof instagramAccount>;

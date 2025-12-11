@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,7 @@ import {
   StepBrandIdentity,
   StepExtraction,
   StepReferenceImages,
+  StepInstagramConnect,
   type OnboardingFormData,
 } from "@/components/onboarding";
 import { Button } from "@/components/ui/button";
@@ -23,19 +24,103 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: 1, title: "Informações Básicas", description: "Nome e links da sua empresa" },
-  { id: 2, title: "Extração IA", description: "Analisando sua marca" },
-  { id: 3, title: "Identidade da Marca", description: "Tom de voz e cores" },
-  { id: 4, title: "Conteúdo", description: "Preferências e referências" },
+  { id: 1, title: "Conectar Instagram", description: "Vincule sua conta do Instagram" },
+  { id: 2, title: "Informações Básicas", description: "Nome e links da sua empresa" },
+  { id: 3, title: "Extração IA", description: "Analisando sua marca" },
+  { id: 4, title: "Identidade da Marca", description: "Tom de voz e cores" },
+  { id: 5, title: "Conteúdo", description: "Preferências e referências" },
 ];
+
+type InstagramAccount = {
+  username: string;
+  accountId: string;
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<OnboardingFormData>(DEFAULT_FORM_DATA);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [extractionComplete, setExtractionComplete] = useState(false);
+
+  // Instagram connection state
+  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+  const [connectedInstagramAccount, setConnectedInstagramAccount] = useState<InstagramAccount | null>(null);
+  const [isCheckingInstagram, setIsCheckingInstagram] = useState(true);
+
+  // Check Instagram connection status on mount and handle callback params
+  useEffect(() => {
+    const checkInstagramConnection = async () => {
+      try {
+        const response = await fetch("/api/instagram-account");
+        const data = await response.json();
+
+        if (data.connected && data.account) {
+          setIsInstagramConnected(true);
+          setConnectedInstagramAccount(data.account);
+          
+          // Pre-fill Instagram handle if available
+          if (data.account.username) {
+            setFormData((prev) => ({
+              ...prev,
+              instagramHandle: data.account.username,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error checking Instagram connection:", error);
+      } finally {
+        setIsCheckingInstagram(false);
+      }
+    };
+
+    // Handle callback parameters from Instagram OAuth
+    const instagramConnected = searchParams.get("instagram_connected");
+    const instagramError = searchParams.get("instagram_error");
+    const errorMessage = searchParams.get("error_message");
+    const username = searchParams.get("username");
+
+    if (instagramConnected === "true") {
+      toast.success("Instagram conectado com sucesso!");
+      
+      // If username is in the URL params, use it immediately
+      if (username) {
+        setIsInstagramConnected(true);
+        setConnectedInstagramAccount({
+          username,
+          accountId: "",
+        });
+        setFormData((prev) => ({
+          ...prev,
+          instagramHandle: username,
+        }));
+        setIsCheckingInstagram(false);
+      } else {
+        // Otherwise check the API
+        checkInstagramConnection();
+      }
+
+      // Clean up URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete("instagram_connected");
+      url.searchParams.delete("username");
+      window.history.replaceState({}, "", url.toString());
+    } else if (instagramError === "true") {
+      toast.error(errorMessage ?? "Erro ao conectar Instagram. Tente novamente.");
+
+      // Clean up URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete("instagram_error");
+      url.searchParams.delete("error_message");
+      window.history.replaceState({}, "", url.toString());
+
+      setIsCheckingInstagram(false);
+    } else {
+      checkInstagramConnection();
+    }
+  }, [searchParams]);
 
   const updateFormData = useCallback((data: Partial<OnboardingFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -49,16 +134,35 @@ export default function OnboardingPage() {
     setReferenceImages((prev) => prev.filter((img) => img !== url));
   }, []);
 
+  const handleCheckInstagramConnection = useCallback(async () => {
+    setIsCheckingInstagram(true);
+    try {
+      const response = await fetch("/api/instagram-account");
+      const data = await response.json();
+
+      if (data.connected && data.account) {
+        setIsInstagramConnected(true);
+        setConnectedInstagramAccount(data.account);
+      }
+    } catch (error) {
+      console.error("Error checking Instagram connection:", error);
+    } finally {
+      setIsCheckingInstagram(false);
+    }
+  }, []);
+
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return formData.name.trim().length > 0;
+        return isInstagramConnected;
       case 2:
+        return formData.name.trim().length > 0;
+      case 3:
         // Pode prosseguir se a extração estiver completa ou não houver site para extrair
         return extractionComplete || !formData.websiteUrl;
-      case 3:
-        return true; // Brand identity is optional
       case 4:
+        return true; // Brand identity is optional
+      case 5:
         return true; // Reference images are optional
       default:
         return false;
@@ -197,19 +301,27 @@ export default function OnboardingPage() {
         </CardHeader>
         <CardContent>
           {currentStep === 1 && (
-            <StepBasicInfo formData={formData} updateFormData={updateFormData} />
+            <StepInstagramConnect
+              connectedAccount={connectedInstagramAccount}
+              isConnected={isInstagramConnected}
+              isLoading={isCheckingInstagram}
+              onCheckConnection={handleCheckInstagramConnection}
+            />
           )}
           {currentStep === 2 && (
+            <StepBasicInfo formData={formData} updateFormData={updateFormData} />
+          )}
+          {currentStep === 3 && (
             <StepExtraction
               formData={formData}
               onExtractionComplete={() => setExtractionComplete(true)}
               updateFormData={updateFormData}
             />
           )}
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <StepBrandIdentity formData={formData} updateFormData={updateFormData} />
           )}
-          {currentStep === 4 && (
+          {currentStep === 5 && (
             <StepReferenceImages
               formData={formData}
               onAddImage={handleAddImage}
@@ -256,4 +368,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
