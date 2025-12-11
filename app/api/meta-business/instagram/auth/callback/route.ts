@@ -241,7 +241,7 @@ export async function GET(request: Request) {
     try {
       const subscribed = await subscribeToWebhooks(
         longLivedToken,
-        instagramUserId,
+        profile.id,
         ALL_WEBHOOK_FIELDS
       );
       console.log(
