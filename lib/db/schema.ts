@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AppUsage } from "../usage";
 
-export const user = pgTable("User", {
+export const user = pgTable("users", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }).notNull(),
   image_url: text("image_url"),
@@ -21,44 +21,44 @@ export const user = pgTable("User", {
 
 export type User = InferSelectModel<typeof user>;
 
-export const chat = pgTable("Chat", {
+export const chat = pgTable("chats", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp("createdAt").notNull(),
+  createdAt: timestamp("created_at").notNull(),
   title: text("title").notNull(),
-  userId: uuid("userId")
+  userId: uuid("user_id")
     .notNull()
     .references(() => user.id),
   visibility: varchar("visibility", { enum: ["public", "private"] })
     .notNull()
     .default("private"),
-  lastContext: jsonb("lastContext").$type<AppUsage | null>(),
+  lastContext: jsonb("last_context").$type<AppUsage | null>(),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
 
-export const message = pgTable("Message_v2", {
+export const message = pgTable("messages", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  chatId: uuid("chatId")
+  chatId: uuid("chat_id")
     .notNull()
     .references(() => chat.id),
   role: varchar("role").notNull(),
   parts: json("parts").notNull(),
   attachments: json("attachments").notNull(),
-  createdAt: timestamp("createdAt").notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
 
 export const vote = pgTable(
-  "Vote_v2",
+  "votes",
   {
-    chatId: uuid("chatId")
+    chatId: uuid("chat_id")
       .notNull()
       .references(() => chat.id),
-    messageId: uuid("messageId")
+    messageId: uuid("message_id")
       .notNull()
       .references(() => message.id),
-    isUpvoted: boolean("isUpvoted").notNull(),
+    isUpvoted: boolean("is_upvoted").notNull(),
   },
   (table) => {
     return {
@@ -70,16 +70,16 @@ export const vote = pgTable(
 export type Vote = InferSelectModel<typeof vote>;
 
 export const document = pgTable(
-  "Document",
+  "documents",
   {
     id: uuid("id").notNull().defaultRandom(),
-    createdAt: timestamp("createdAt").notNull(),
+    createdAt: timestamp("created_at").notNull(),
     title: text("title").notNull(),
     content: text("content"),
     kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
       .notNull()
       .default("text"),
-    userId: uuid("userId")
+    userId: uuid("user_id")
       .notNull()
       .references(() => user.id),
   },
@@ -93,19 +93,19 @@ export const document = pgTable(
 export type Document = InferSelectModel<typeof document>;
 
 export const suggestion = pgTable(
-  "Suggestion",
+  "suggestions",
   {
     id: uuid("id").notNull().defaultRandom(),
-    documentId: uuid("documentId").notNull(),
-    documentCreatedAt: timestamp("documentCreatedAt").notNull(),
-    originalText: text("originalText").notNull(),
-    suggestedText: text("suggestedText").notNull(),
+    documentId: uuid("document_id").notNull(),
+    documentCreatedAt: timestamp("document_created_at").notNull(),
+    originalText: text("original_text").notNull(),
+    suggestedText: text("suggested_text").notNull(),
     description: text("description"),
-    isResolved: boolean("isResolved").notNull().default(false),
-    userId: uuid("userId")
+    isResolved: boolean("is_resolved").notNull().default(false),
+    userId: uuid("user_id")
       .notNull()
       .references(() => user.id),
-    createdAt: timestamp("createdAt").notNull(),
+    createdAt: timestamp("created_at").notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),
@@ -119,11 +119,11 @@ export const suggestion = pgTable(
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
 export const stream = pgTable(
-  "Stream",
+  "streams",
   {
     id: uuid("id").notNull().defaultRandom(),
-    chatId: uuid("chatId").notNull(),
-    createdAt: timestamp("createdAt").notNull(),
+    chatId: uuid("chat_id").notNull(),
+    createdAt: timestamp("created_at").notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),
@@ -137,7 +137,7 @@ export const stream = pgTable(
 export type Stream = InferSelectModel<typeof stream>;
 
 // Company table for storing brand information
-export const company = pgTable("Company", {
+export const company = pgTable("companies", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
@@ -162,7 +162,7 @@ export type Company = InferSelectModel<typeof company>;
 
 // User-Company relationship (multi-tenant support)
 export const userCompany = pgTable(
-  "UserCompany",
+  "user_companies",
   {
     userId: uuid("user_id")
       .notNull()
@@ -183,7 +183,7 @@ export const userCompany = pgTable(
 export type UserCompany = InferSelectModel<typeof userCompany>;
 
 // Reference images for the company (for social media content generation)
-export const companyReferenceImage = pgTable("CompanyReferenceImage", {
+export const companyReferenceImage = pgTable("company_reference_image", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   companyId: uuid("company_id")
     .notNull()

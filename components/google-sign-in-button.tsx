@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 export function GoogleSignInButton() {
   return (
     <Button
-      className="w-full"
+      className="w-full hover:bg-muted hover:text-foreground"
       type="button"
       variant="outline"
       onClick={() => signIn("google")}
