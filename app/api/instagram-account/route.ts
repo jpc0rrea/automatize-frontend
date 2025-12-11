@@ -34,6 +34,8 @@ export async function GET() {
       .select({
         username: instagramAccount.username,
         accountId: instagramAccount.accountId,
+        name: instagramAccount.name,
+        website: instagramAccount.website,
       })
       .from(instagramAccount)
       .where(
@@ -52,6 +54,8 @@ export async function GET() {
         account: {
           username: account.username,
           accountId: account.accountId,
+          name: account.name,
+          website: account.website,
         },
       });
     }

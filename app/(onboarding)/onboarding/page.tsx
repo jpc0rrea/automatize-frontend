@@ -34,6 +34,8 @@ const STEPS = [
 type InstagramAccount = {
   username: string;
   accountId: string;
+  name?: string;
+  website?: string;
 };
 
 export default function OnboardingPage() {
@@ -61,13 +63,13 @@ export default function OnboardingPage() {
           setIsInstagramConnected(true);
           setConnectedInstagramAccount(data.account);
           
-          // Pre-fill Instagram handle if available
-          if (data.account.username) {
-            setFormData((prev) => ({
-              ...prev,
-              instagramHandle: data.account.username,
-            }));
-          }
+          // Pre-fill form fields from Instagram account data
+          setFormData((prev) => ({
+            ...prev,
+            instagramHandle: data.account.username ?? prev.instagramHandle,
+            name: data.account.name ?? prev.name,
+            websiteUrl: data.account.website ?? prev.websiteUrl,
+          }));
         }
       } catch (error) {
         console.error("Error checking Instagram connection:", error);
@@ -81,6 +83,8 @@ export default function OnboardingPage() {
     const instagramError = searchParams.get("instagram_error");
     const errorMessage = searchParams.get("error_message");
     const username = searchParams.get("username");
+    const instagramName = searchParams.get("name");
+    const instagramWebsite = searchParams.get("website");
 
     if (instagramConnected === "true") {
       toast.success("Instagram conectado com sucesso!");
@@ -91,10 +95,14 @@ export default function OnboardingPage() {
         setConnectedInstagramAccount({
           username,
           accountId: "",
+          name: instagramName ?? undefined,
+          website: instagramWebsite ?? undefined,
         });
         setFormData((prev) => ({
           ...prev,
           instagramHandle: username,
+          name: instagramName ?? prev.name,
+          websiteUrl: instagramWebsite ?? prev.websiteUrl,
         }));
         setIsCheckingInstagram(false);
       } else {
@@ -106,6 +114,8 @@ export default function OnboardingPage() {
       const url = new URL(window.location.href);
       url.searchParams.delete("instagram_connected");
       url.searchParams.delete("username");
+      url.searchParams.delete("name");
+      url.searchParams.delete("website");
       window.history.replaceState({}, "", url.toString());
     } else if (instagramError === "true") {
       toast.error(errorMessage ?? "Erro ao conectar Instagram. Tente novamente.");

@@ -225,39 +225,63 @@ export async function refreshLongLivedToken(currentToken: string): Promise<{
 }
 
 /**
+ * Instagram user profile response type
+ */
+export type InstagramUserProfile = {
+  id: string;
+  name?: string;
+  username?: string;
+  website?: string;
+  biography?: string;
+  profile_picture_url?: string;
+  media_count?: number;
+};
+
+/**
  * Get Instagram user profile information
  */
 export async function getUserProfile(
   accessToken: string,
-): Promise<{
-  id: string;
-  username: string;
-  account_type?: string;
-  media_count?: number;
-}> {
-  console.log("TODELETE: getUserProfile - Fetching user profile for ID:", {
-    accessToken,
-    fields: "id,username,account_type,media_count",
-  });
+): Promise<InstagramUserProfile> {
+  console.log("TODELETE: getUserProfile - Fetching user profile");
 
-  const url = new URL(`${INSTAGRAM_GRAPH_URL}/me`);
-  url.searchParams.set("fields", "id,username,account_type,media_count");
-  url.searchParams.set("access_token", accessToken);
+  // First get the user ID from /me endpoint
+  const meUrl = new URL(`${INSTAGRAM_GRAPH_URL}/me`);
+  meUrl.searchParams.set("fields", "id");
+  meUrl.searchParams.set("access_token", accessToken);
 
-  const response = await fetch(url);
-  const data = await response.json();
+  const meResponse = await fetch(meUrl);
+  const meData = await meResponse.json();
 
-  if (!response.ok) {
-    console.error("TODELETE: getUserProfile - Error fetching profile");
-    console.error("TODELETE: getUserProfile - Response data:", data);
-    throw new Error(data.error?.message ?? "Failed to get user profile");
+  if (!meResponse.ok) {
+    console.error("TODELETE: getUserProfile - Error fetching /me");
+    console.error("TODELETE: getUserProfile - Response data:", meData);
+    throw new Error(meData.error?.message ?? "Failed to get user profile");
   }
 
-  console.log("TODELETE: getUserProfile - Me response:", data);
-  console.log("TODELETE: getUserProfile - Profile fetched successfully");
-  console.log("TODELETE: getUserProfile - Username:", data.username);
+  console.log("TODELETE: getUserProfile - Got user ID:", meData.id);
 
-  return data;
+  // Now fetch full profile with all available fields
+  const profileUrl = new URL(`${INSTAGRAM_GRAPH_URL}/${meData.id}`);
+  profileUrl.searchParams.set(
+    "fields",
+    "id,name,username,website,biography,profile_picture_url,media_count"
+  );
+  profileUrl.searchParams.set("access_token", accessToken);
+
+  const profileResponse = await fetch(profileUrl);
+  const profileData = await profileResponse.json();
+
+  if (!profileResponse.ok) {
+    console.error("TODELETE: getUserProfile - Error fetching profile info");
+    console.error("TODELETE: getUserProfile - Response data:", profileData);
+    throw new Error(profileData.error?.message ?? "Failed to get user profile info");
+  }
+
+  console.log("TODELETE: getUserProfile - Profile fetched successfully");
+  console.log("TODELETE: getUserProfile - Profile data:", profileData);
+
+  return profileData;
 }
 
 /**

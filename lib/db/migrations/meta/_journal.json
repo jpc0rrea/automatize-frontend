@@ -15,6 +15,13 @@
       "when": 1765459887350,
       "tag": "0001_cute_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765476767174,
+      "tag": "0002_cold_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

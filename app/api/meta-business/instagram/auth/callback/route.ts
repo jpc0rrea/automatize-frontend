@@ -144,10 +144,6 @@ export async function GET(request: Request) {
       "TODELETE: /api/instagram/auth/callback GET - Username:",
       profile.username
     );
-    console.log(
-      "TODELETE: /api/instagram/auth/callback GET - Account type:",
-      profile.account_type
-    );
 
     // Step 4: Store/update the Instagram account in the database
     console.log(
@@ -204,6 +200,11 @@ export async function GET(request: Request) {
         .set({
           accessToken: longLivedToken,
           username: profile.username ?? null,
+          name: profile.name ?? null,
+          website: profile.website ?? null,
+          biography: profile.biography ?? null,
+          profilePictureUrl: profile.profile_picture_url ?? null,
+          mediaCount: profile.media_count ?? null,
           tokenExpiresAt: tokenExpiresAt,
           updatedAt: new Date(),
           deletedAt: null, // Restore if was soft deleted
@@ -223,6 +224,11 @@ export async function GET(request: Request) {
           userId: userId,
           accountId: instagramUserId,
           username: profile.username ?? null,
+          name: profile.name ?? null,
+          website: profile.website ?? null,
+          biography: profile.biography ?? null,
+          profilePictureUrl: profile.profile_picture_url ?? null,
+          mediaCount: profile.media_count ?? null,
           accessToken: longLivedToken,
           tokenExpiresAt: tokenExpiresAt,
         })
@@ -269,6 +275,12 @@ export async function GET(request: Request) {
     const redirectUrl = new URL("/onboarding", request.url);
     redirectUrl.searchParams.set("instagram_connected", "true");
     redirectUrl.searchParams.set("username", profile.username ?? "");
+    if (profile.name) {
+      redirectUrl.searchParams.set("name", profile.name);
+    }
+    if (profile.website) {
+      redirectUrl.searchParams.set("website", profile.website);
+    }
 
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
