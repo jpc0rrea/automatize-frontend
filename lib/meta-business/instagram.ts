@@ -115,28 +115,14 @@ export async function exchangeCodeForToken(code: string): Promise<{
   }
 
   console.log("TODELETE: exchangeCodeForToken - Token exchange successful");
-  console.log("TODELETE: exchangeCodeForToken - Raw response data:", {
+  console.log("TODELETE: exchangeCodeForToken - User ID:", {
+    userId: data.user_id,
     responseData: data,
   });
 
-  // Business Login for Instagram returns data wrapped in a "data" array
-  // Format: { data: [{ access_token, user_id, permissions }] }
-  // But some responses may still use the old format: { access_token, user_id }
-  const tokenData = data.data?.[0] ?? data;
-
-  console.log("TODELETE: exchangeCodeForToken - Parsed token data:", {
-    userId: tokenData.user_id,
-    hasAccessToken: !!tokenData.access_token,
-  });
-
-  if (!tokenData.access_token || !tokenData.user_id) {
-    console.error("TODELETE: exchangeCodeForToken - Missing token data in response");
-    throw new Error("Invalid response format: missing access_token or user_id");
-  }
-
   return {
-    access_token: tokenData.access_token,
-    user_id: tokenData.user_id.toString(),
+    access_token: data.access_token,
+    user_id: data.user_id.toString(),
   };
 }
 
@@ -149,12 +135,7 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   token_type: string;
   expires_in: number;
 }> {
-  // Validate short-lived token before making the request
-  if (!shortLivedToken || shortLivedToken === "undefined") {
-    console.error("TODELETE: getLongLivedToken - Invalid short-lived token:", shortLivedToken);
-    throw new Error("Invalid short-lived token: token is missing or undefined");
-  }
-
+  
   const { appSecret } = getInstagramConfig();
 
   const url = new URL(INSTAGRAM_LONG_LIVED_TOKEN_URL);
@@ -166,8 +147,11 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
     "TODELETE: getLongLivedToken - Starting long-lived token exchange",
     {
       url: url.toString(),
-      shortLivedTokenLength: shortLivedToken.length,
-      shortLivedTokenPrefix: shortLivedToken.substring(0, 20) + "...",
+      params: {
+        grant_type: "ig_exchange_token",
+        client_secret: appSecret,
+        access_token: shortLivedToken,
+      },
     }
   );
 
