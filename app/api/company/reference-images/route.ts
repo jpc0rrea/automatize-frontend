@@ -37,6 +37,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  try {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -44,9 +45,11 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { companyId, url, source, caption } = body as {
+  console.log("TODELETE body on reference images route:", body);
+  const { companyId, url, thumbnailUrl, source, caption } = body as {
     companyId: string;
     url: string;
+    thumbnailUrl?: string;
     source: "upload" | "instagram_scrape";
     caption?: string;
   };
@@ -72,11 +75,16 @@ export async function POST(request: Request) {
   const image = await addCompanyReferenceImage({
     companyId,
     url,
+    thumbnailUrl,
     source,
     caption,
   });
 
   return Response.json({ image }, { status: 201 });
+  } catch (error) {
+    console.log("TODELETE error on reference images route:", error);
+    return new ChatSDKError("bad_request:api", "Failed to add company reference image").toResponse();
+  }
 }
 
 export async function DELETE(request: Request) {

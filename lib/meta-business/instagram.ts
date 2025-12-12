@@ -471,3 +471,128 @@ export type InstagramWebhookPayload = {
   object: "instagram";
   entry: InstagramWebhookEntry[];
 };
+
+// ================================
+// Instagram Media Types
+// ================================
+
+/**
+ * Supported Instagram media types
+ */
+export type InstagramMediaType = "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+
+/**
+ * Single Instagram media item
+ */
+export type InstagramMedia = {
+  id: string;
+  media_url: string;
+  caption?: string;
+  media_type: InstagramMediaType;
+  thumbnail_url?: string;
+};
+
+/**
+ * Pagination cursor info from Instagram API
+ */
+export type InstagramPagingCursors = {
+  before?: string;
+  after?: string;
+};
+
+/**
+ * Pagination info from Instagram API response
+ */
+export type InstagramPaging = {
+  cursors?: InstagramPagingCursors;
+  next?: string;
+  previous?: string;
+};
+
+/**
+ * Parameters for getting Instagram account media
+ */
+export type GetInstagramMediaParams = {
+  accessToken: string;
+  instagramAccountId: string;
+  after?: string;
+  limit?: number;
+};
+
+/**
+ * Response from getInstagramAccountMedia method
+ */
+export type GetInstagramMediaResponse = {
+  media: InstagramMedia[];
+  pagination: {
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    nextCursor?: string;
+    previousCursor?: string;
+  };
+};
+
+/**
+ * Get Instagram account media
+ * Fetches media posts from an Instagram account with pagination support
+ *
+ * @param params - Parameters including accessToken, instagramAccountId, and optional pagination params
+ * @returns Media items and pagination information
+ */
+export async function getInstagramAccountMedia(
+  params: GetInstagramMediaParams
+): Promise<GetInstagramMediaResponse> {
+  const { accessToken, instagramAccountId, after, limit = 20 } = params;
+
+  console.log(
+    "TODELETE: getInstagramAccountMedia - Fetching media for account:",
+    instagramAccountId
+  );
+  console.log("TODELETE: getInstagramAccountMedia - Limit:", limit);
+  console.log(
+    "TODELETE: getInstagramAccountMedia - After cursor:",
+    after ?? "none"
+  );
+
+  const url = new URL(`${INSTAGRAM_GRAPH_URL}/${instagramAccountId}/media`);
+  url.searchParams.set(
+    "fields",
+    "id,media_url,caption,media_type,thumbnail_url"
+  );
+  url.searchParams.set("limit", limit.toString());
+  url.searchParams.set("access_token", accessToken);
+
+  if (after) {
+    url.searchParams.set("after", after);
+  }
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("TODELETE: getInstagramAccountMedia - Error fetching media");
+    console.error("TODELETE: getInstagramAccountMedia - Response data:", data);
+    throw new Error(data.error?.message ?? "Failed to get Instagram media");
+  }
+
+  console.log(
+    "TODELETE: getInstagramAccountMedia - Media fetched successfully"
+  );
+  console.log(
+    "TODELETE: getInstagramAccountMedia - Items count:",
+    data.data?.length ?? 0
+  );
+
+  const mediaItems: InstagramMedia[] = data.data ?? [];
+  const paging: InstagramPaging | undefined = data.paging;
+
+  return {
+    media: mediaItems,
+    pagination: {
+      hasNextPage: !!paging?.next,
+      hasPreviousPage: !!paging?.previous,
+      nextCursor: paging?.cursors?.after,
+      previousCursor: paging?.cursors?.before,
+    },
+  };
+}

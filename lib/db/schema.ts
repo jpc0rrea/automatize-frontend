@@ -191,6 +191,7 @@ export const companyReferenceImage = pgTable("company_reference_image", {
     .notNull()
     .references(() => company.id),
   url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
   source: varchar("source", { enum: ["upload", "instagram_scrape"] }).notNull(),
   caption: text("caption"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -230,3 +231,37 @@ export const instagramAccount = pgTable(
 );
 
 export type InstagramAccount = InferSelectModel<typeof instagramAccount>;
+
+// Scheduled posts for Instagram publishing
+export const scheduledPost = pgTable(
+  "scheduled_posts",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id),
+    mediaUrl: text("media_url").notNull(),
+    mediaType: varchar("media_type", { length: 32 }),
+    caption: text("caption").notNull(),
+    locationId: text("location_id"),
+    userTagsJson: text("user_tags_json"),
+    scheduledAt: timestamp("scheduled_at").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("pending"),
+    retryAttempts: integer("retry_attempts").notNull().default(0),
+    lastAttemptAt: timestamp("last_attempt_at"),
+    lastErrorMessage: text("last_error_message"),
+    mediaContainerId: text("media_container_id"),
+    mediaContainerStatus: varchar("media_container_status", { length: 32 }),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => ({
+    uniqueMediaContainerId: unique("scheduled_posts_media_container_id_unique").on(
+      table.mediaContainerId
+    ),
+  })
+);
+
+export type ScheduledPost = InferSelectModel<typeof scheduledPost>;

@@ -9,6 +9,7 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
   type SQL,
 } from "drizzle-orm";
@@ -26,7 +27,11 @@ import {
   companyReferenceImage,
   type DBMessage,
   document,
+  type InstagramAccount,
+  instagramAccount,
   message,
+  type ScheduledPost,
+  scheduledPost,
   type Suggestion,
   stream,
   suggestion,
@@ -849,11 +854,13 @@ export async function removeUserFromCompany({
 export async function addCompanyReferenceImage({
   companyId,
   url,
+  thumbnailUrl,
   source,
   caption,
 }: {
   companyId: string;
   url: string;
+  thumbnailUrl?: string | null;
   source: "upload" | "instagram_scrape";
   caption?: string | null;
 }): Promise<CompanyReferenceImage> {
@@ -863,6 +870,7 @@ export async function addCompanyReferenceImage({
       .values({
         companyId,
         url,
+        thumbnailUrl,
         source,
         caption,
       })
@@ -931,6 +939,234 @@ export async function hasUserCompletedOnboarding({
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to check onboarding status"
+    );
+  }
+}
+
+// ============================================================================
+// Scheduled Post CRUD Operations
+// ============================================================================
+
+export type CreateScheduledPostInput = {
+  mediaUrl: string;
+  mediaType?: string | null;
+  caption: string;
+  locationId?: string | null;
+  userTagsJson?: string | null;
+  scheduledAt: Date;
+};
+
+export type UpdateScheduledPostInput = Partial<CreateScheduledPostInput> & {
+  status?: string;
+  retryAttempts?: number;
+  lastAttemptAt?: Date | null;
+  lastErrorMessage?: string | null;
+  mediaContainerId?: string | null;
+  mediaContainerStatus?: string | null;
+  publishedAt?: Date | null;
+};
+
+export async function createScheduledPost({
+  userId,
+  data,
+}: {
+  userId: string;
+  data: CreateScheduledPostInput;
+}): Promise<ScheduledPost> {
+  try {
+    const [newPost] = await db
+      .insert(scheduledPost)
+      .values({
+        userId,
+        mediaUrl: data.mediaUrl,
+        mediaType: data.mediaType,
+        caption: data.caption,
+        locationId: data.locationId,
+        userTagsJson: data.userTagsJson,
+        scheduledAt: data.scheduledAt,
+      })
+      .returning();
+
+    return newPost;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create scheduled post"
+    );
+  }
+}
+
+export async function getScheduledPostById({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}): Promise<ScheduledPost | null> {
+  try {
+    const [post] = await db
+      .select()
+      .from(scheduledPost)
+      .where(
+        and(
+          eq(scheduledPost.id, id),
+          eq(scheduledPost.userId, userId),
+          isNull(scheduledPost.deletedAt)
+        )
+      )
+      .limit(1);
+
+    return post ?? null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get scheduled post by id"
+    );
+  }
+}
+
+export async function getScheduledPostsByUserId({
+  userId,
+  page = 1,
+  perPage = 10,
+  afterDate,
+}: {
+  userId: string;
+  page?: number;
+  perPage?: number;
+  afterDate?: Date;
+}): Promise<{ posts: ScheduledPost[]; total: number }> {
+  try {
+    const whereConditions = [
+      eq(scheduledPost.userId, userId),
+      isNull(scheduledPost.deletedAt),
+    ];
+
+    if (afterDate) {
+      whereConditions.push(gte(scheduledPost.scheduledAt, afterDate));
+    }
+
+    const skip = (page - 1) * perPage;
+
+    const [posts, countResult] = await Promise.all([
+      db
+        .select()
+        .from(scheduledPost)
+        .where(and(...whereConditions))
+        .orderBy(asc(scheduledPost.scheduledAt))
+        .limit(perPage)
+        .offset(skip),
+      db
+        .select({ count: count() })
+        .from(scheduledPost)
+        .where(and(...whereConditions)),
+    ]);
+
+    return {
+      posts,
+      total: countResult[0]?.count ?? 0,
+    };
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get scheduled posts by user id"
+    );
+  }
+}
+
+export async function updateScheduledPost({
+  id,
+  userId,
+  data,
+}: {
+  id: string;
+  userId: string;
+  data: UpdateScheduledPostInput;
+}): Promise<ScheduledPost> {
+  try {
+    const [updatedPost] = await db
+      .update(scheduledPost)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(scheduledPost.id, id),
+          eq(scheduledPost.userId, userId),
+          isNull(scheduledPost.deletedAt)
+        )
+      )
+      .returning();
+
+    if (!updatedPost) {
+      throw new ChatSDKError(
+        "not_found:database",
+        "Scheduled post not found"
+      );
+    }
+
+    return updatedPost;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to update scheduled post"
+    );
+  }
+}
+
+export async function deleteScheduledPost({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}): Promise<void> {
+  try {
+    // Soft delete by setting deletedAt
+    await db
+      .update(scheduledPost)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(scheduledPost.id, id),
+          eq(scheduledPost.userId, userId),
+          isNull(scheduledPost.deletedAt)
+        )
+      );
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to delete scheduled post"
+    );
+  }
+}
+
+export async function getInstagramAccountByUserId({
+  userId,
+}: {
+  userId: string;
+}): Promise<InstagramAccount | null> {
+  try {
+    const [account] = await db
+      .select()
+      .from(instagramAccount)
+      .where(
+        and(
+          eq(instagramAccount.userId, userId),
+          isNull(instagramAccount.deletedAt)
+        )
+      )
+      .limit(1);
+
+    return account ?? null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get Instagram account by user id"
     );
   }
 }

@@ -24,8 +24,16 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: 1, title: "Conectar Instagram", description: "Vincule sua conta do Instagram" },
-  { id: 2, title: "Informações Básicas", description: "Nome e links da sua empresa" },
+  {
+    id: 1,
+    title: "Conectar Instagram",
+    description: "Vincule sua conta do Instagram",
+  },
+  {
+    id: 2,
+    title: "Informações Básicas",
+    description: "Nome e links da sua empresa",
+  },
   { id: 3, title: "Extração IA", description: "Analisando sua marca" },
   { id: 4, title: "Identidade da Marca", description: "Tom de voz e cores" },
   { id: 5, title: "Conteúdo", description: "Preferências e referências" },
@@ -43,14 +51,16 @@ export default function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<OnboardingFormData>(DEFAULT_FORM_DATA);
+  const [formData, setFormData] =
+    useState<OnboardingFormData>(DEFAULT_FORM_DATA);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [extractionComplete, setExtractionComplete] = useState(false);
 
   // Instagram connection state
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
-  const [connectedInstagramAccount, setConnectedInstagramAccount] = useState<InstagramAccount | null>(null);
+  const [connectedInstagramAccount, setConnectedInstagramAccount] =
+    useState<InstagramAccount | null>(null);
   const [isCheckingInstagram, setIsCheckingInstagram] = useState(true);
 
   // Check Instagram connection status on mount and handle callback params
@@ -69,7 +79,7 @@ export default function OnboardingPage() {
             website: data.account.website,
             profilePictureUrl: data.account.profilePictureUrl,
           });
-          
+
           // Pre-fill form fields from Instagram account data
           setFormData((prev) => ({
             ...prev,
@@ -96,7 +106,7 @@ export default function OnboardingPage() {
 
     if (instagramConnected === "true") {
       toast.success("Instagram conectado com sucesso!");
-      
+
       // If username is in the URL params, use it immediately
       if (username) {
         setIsInstagramConnected(true);
@@ -128,7 +138,9 @@ export default function OnboardingPage() {
       url.searchParams.delete("profile_picture_url");
       window.history.replaceState({}, "", url.toString());
     } else if (instagramError === "true") {
-      toast.error(errorMessage ?? "Erro ao conectar Instagram. Tente novamente.");
+      toast.error(
+        errorMessage ?? "Erro ao conectar Instagram. Tente novamente."
+      );
 
       // Clean up URL parameters
       const url = new URL(window.location.href);
@@ -228,12 +240,16 @@ export default function OnboardingPage() {
           industry: formData.industry || null,
           brandVoice: formData.brandVoice,
           targetAudience: formData.targetAudience || null,
-          brandColors: formData.brandColors.length > 0 ? formData.brandColors : null,
+          brandColors:
+            formData.brandColors.length > 0 ? formData.brandColors : null,
           logoUrl: formData.logoUrl || null,
-          contentThemes: formData.contentThemes.length > 0 ? formData.contentThemes : null,
+          contentThemes:
+            formData.contentThemes.length > 0 ? formData.contentThemes : null,
           hashtags: formData.hashtags.length > 0 ? formData.hashtags : null,
           preferredFormats:
-            formData.preferredFormats.length > 0 ? formData.preferredFormats : null,
+            formData.preferredFormats.length > 0
+              ? formData.preferredFormats
+              : null,
         }),
       });
 
@@ -243,7 +259,7 @@ export default function OnboardingPage() {
 
       const { company } = await companyResponse.json();
 
-      // Add reference images
+      // Add uploaded reference images
       for (const imageUrl of referenceImages) {
         await fetch("/api/company/reference-images", {
           method: "POST",
@@ -252,6 +268,21 @@ export default function OnboardingPage() {
             companyId: company.id,
             url: imageUrl,
             source: "upload",
+          }),
+        });
+      }
+
+      // Add selected Instagram media
+      for (const media of formData.selectedInstagramMedia) {
+        await fetch("/api/company/reference-images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            companyId: company.id,
+            url: media.mediaUrl,
+            thumbnailUrl: media.thumbnailUrl ?? null,
+            source: "instagram_scrape",
+            caption: media.caption ?? null,
           }),
         });
       }
@@ -276,42 +307,46 @@ export default function OnboardingPage() {
   return (
     <div className="w-full max-w-2xl">
       {/* Progress Steps */}
-      <div className="mb-8">
+      <div className="mb-8 px-6">
         {/* Step circles and connectors */}
-        <div className="flex items-center">
+        <div className="relative flex items-center">
           {STEPS.map((step, index) => (
-            <div className="flex flex-1 items-center" key={step.id}>
-              {/* Step circle */}
-              <div
-                className={cn(
-                  "z-10 flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                  currentStep > step.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : currentStep === step.id
+            <div className="relative flex flex-1 items-center" key={step.id}>
+              {/* Step circle - centered in its container */}
+              <div className="flex w-full items-center justify-center">
+                <div
+                  className={cn(
+                    "relative z-10 flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                    currentStep > step.id
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : currentStep === step.id
                       ? "border-primary text-primary"
                       : "border-muted text-muted-foreground"
-                )}
-              >
-                {currentStep > step.id ? (
-                  <Check className="size-5" />
-                ) : (
-                  <span className="font-medium text-sm">{step.id}</span>
-                )}
+                  )}
+                >
+                  {currentStep > step.id ? (
+                    <Check className="size-5" />
+                  ) : (
+                    <span className="font-medium text-sm">{step.id}</span>
+                  )}
+                </div>
               </div>
-              {/* Connector line */}
+              {/* Connector line - spans from center of current circle to center of next */}
               {index < STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "h-0.5 flex-1 transition-colors",
+                    "absolute left-1/2 top-1/2 h-0.5 w-full -translate-y-1/2 transition-colors",
+                    "ml-5",
                     // Both steps completed: solid primary
                     currentStep > step.id && currentStep > STEPS[index + 1].id
                       ? "bg-primary"
-                      // Current step completed but next is not: dashed
-                      : currentStep > step.id
-                        ? "border-t-2 border-dashed border-primary bg-transparent"
-                        // Neither completed: dashed muted
-                        : "border-t-2 border-dashed border-muted bg-transparent"
+                      : // Current step completed but next is not: dashed
+                      currentStep > step.id
+                      ? "border-t-2 border-dashed border-primary bg-transparent"
+                      : // Neither completed: dashed muted
+                        "border-t-2 border-dashed border-muted bg-transparent"
                   )}
+                  style={{ width: "calc(100% - 40px)" }}
                 />
               )}
             </div>
@@ -319,18 +354,21 @@ export default function OnboardingPage() {
         </div>
         {/* Step labels */}
         <div className="mt-2 hidden sm:flex">
-          {STEPS.map((step, index) => (
-            <div className="flex flex-1 items-center" key={step.id}>
+          {STEPS.map((step) => (
+            <div
+              className="flex flex-1 items-center justify-center"
+              key={step.id}
+            >
               <span
                 className={cn(
                   "size-10 shrink-0 text-center text-xs leading-tight flex items-center justify-center",
-                  currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
+                  currentStep >= step.id
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 )}
               >
                 {step.title}
               </span>
-              {/* Spacer to match connector line width */}
-              {index < STEPS.length - 1 && <div className="flex-1" />}
             </div>
           ))}
         </div>
@@ -340,7 +378,9 @@ export default function OnboardingPage() {
       <Card>
         <CardHeader>
           <CardTitle>{STEPS[currentStep - 1].title}</CardTitle>
-          <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
+          <CardDescription>
+            {STEPS[currentStep - 1].description}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {currentStep === 1 && (
@@ -354,7 +394,9 @@ export default function OnboardingPage() {
           {currentStep === 2 && (
             <StepBasicInfo
               formData={formData}
-              instagramProfilePictureUrl={connectedInstagramAccount?.profilePictureUrl}
+              instagramProfilePictureUrl={
+                connectedInstagramAccount?.profilePictureUrl
+              }
               instagramUsername={connectedInstagramAccount?.username}
               isInstagramConnected={isInstagramConnected}
               updateFormData={updateFormData}
@@ -370,7 +412,9 @@ export default function OnboardingPage() {
           {currentStep === 4 && (
             <StepBrandIdentity
               formData={formData}
-              instagramProfilePictureUrl={connectedInstagramAccount?.profilePictureUrl}
+              instagramProfilePictureUrl={
+                connectedInstagramAccount?.profilePictureUrl
+              }
               updateFormData={updateFormData}
             />
           )}

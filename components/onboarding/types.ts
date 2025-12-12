@@ -1,5 +1,15 @@
 export type BrandVoice = "formal" | "casual" | "playful" | "professional" | "friendly";
 
+export type InstagramMediaType = "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+
+export type InstagramSelectedMedia = {
+  id: string;
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  caption?: string;
+  mediaType: InstagramMediaType;
+};
+
 export type OnboardingFormData = {
   // Step 1: Basic Info
   name: string;
@@ -20,6 +30,9 @@ export type OnboardingFormData = {
   contentThemes: string[];
   hashtags: string[];
   preferredFormats: string[];
+  
+  // Step 5: Instagram Reference Media
+  selectedInstagramMedia: InstagramSelectedMedia[];
 };
 
 export type ExtractionResult = {
@@ -66,5 +79,6 @@ export const DEFAULT_FORM_DATA: OnboardingFormData = {
   contentThemes: [],
   hashtags: [],
   preferredFormats: ["feed", "carousel"],
+  selectedInstagramMedia: [],
 };
 

@@ -3,6 +3,7 @@ export { StepBasicInfo } from "./step-basic-info";
 export { StepExtraction } from "./step-extraction";
 export { StepBrandIdentity } from "./step-brand-identity";
 export { StepReferenceImages } from "./step-reference-images";
+export { InstagramMediaPicker } from "./instagram-media-picker";
 export { DEFAULT_FORM_DATA, BRAND_VOICE_OPTIONS, CONTENT_FORMAT_OPTIONS } from "./types";
-export type { OnboardingFormData, BrandVoice, ExtractionResult } from "./types";
+export type { OnboardingFormData, BrandVoice, ExtractionResult, InstagramSelectedMedia, InstagramMediaType } from "./types";
 

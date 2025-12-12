@@ -1,0 +1,1 @@
+ALTER TABLE "company_reference_image" ADD COLUMN "thumbnail_url" text;

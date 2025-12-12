@@ -226,11 +226,10 @@ export function StepBrandIdentity({ formData, updateFormData, instagramProfilePi
                   type="file"
                 />
                 <Button
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm h-8 sm:h-9 px-3 sm:px-4"
                   disabled={isUploading}
                   onClick={() => fileInputRef.current?.click()}
-                  type="button"
-                  variant="default"
+                  type="button" 
+                  variant="outline"
                 >
                   {isUploading ? (
                     <>
@@ -240,7 +239,7 @@ export function StepBrandIdentity({ formData, updateFormData, instagramProfilePi
                   ) : (
                     <>
                       <Upload className="mr-1.5 size-3 sm:mr-2 sm:size-4" />
-                      Escolher outra imagem
+                      Enviar do dispositivo
                     </>
                   )}
                 </Button>
