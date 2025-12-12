@@ -92,9 +92,9 @@ export function StepExtraction({
   if (isExtracting) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <div className="relative">
+        <div className="relative flex items-center justify-center">
           <Loader2 className="size-12 animate-spin text-primary" />
-          <Sparkles className="-top-1 -right-1 absolute size-5 text-accent" />
+          <Sparkles className="absolute size-5 text-accent" />
         </div>
         <div className="text-center">
           <h3 className="font-medium text-lg">Extraindo informações...</h3>

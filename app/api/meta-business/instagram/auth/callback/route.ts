@@ -281,6 +281,9 @@ export async function GET(request: Request) {
     if (profile.website) {
       redirectUrl.searchParams.set("website", profile.website);
     }
+    if (profile.profile_picture_url) {
+      redirectUrl.searchParams.set("profile_picture_url", profile.profile_picture_url);
+    }
 
     return NextResponse.redirect(redirectUrl);
   } catch (error) {

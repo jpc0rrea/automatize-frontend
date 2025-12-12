@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Instagram } from "lucide-react";
+import { Globe, Instagram, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { OnboardingFormData } from "./types";
@@ -9,11 +9,48 @@ type StepBasicInfoProps = {
   formData: OnboardingFormData;
   updateFormData: (data: Partial<OnboardingFormData>) => void;
   isInstagramConnected?: boolean;
+  instagramProfilePictureUrl?: string;
+  instagramUsername?: string;
 };
 
-export function StepBasicInfo({ formData, updateFormData, isInstagramConnected = false }: StepBasicInfoProps) {
+export function StepBasicInfo({
+  formData,
+  updateFormData,
+  isInstagramConnected = false,
+  instagramProfilePictureUrl,
+  instagramUsername,
+}: StepBasicInfoProps) {
   return (
     <div className="space-y-6">
+      {/* Instagram Profile Preview */}
+      {isInstagramConnected && (
+        <div className="flex flex-col items-center gap-3 pb-4">
+          <div className="relative">
+            <div className="size-20 overflow-hidden rounded-full border-[3px] border-primary bg-muted sm:size-24 md:size-28">
+              {instagramProfilePictureUrl ? (
+                <img
+                  alt={instagramUsername ? `@${instagramUsername}` : "Instagram profile"}
+                  className="size-full object-cover"
+                  src={instagramProfilePictureUrl}
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center bg-primary/10">
+                  <User className="size-8 text-primary sm:size-10 md:size-12" />
+                </div>
+              )}
+            </div>
+            <div className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border-2 border-background bg-linear-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] sm:size-7">
+              <Instagram className="size-3 text-white sm:size-4" />
+            </div>
+          </div>
+          {instagramUsername && (
+            <span className="font-medium text-muted-foreground text-sm sm:text-base">
+              @{instagramUsername}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label className="flex" htmlFor="name">Nome da Empresa *</Label>
         <Input
@@ -43,34 +80,7 @@ export function StepBasicInfo({ formData, updateFormData, isInstagramConnected =
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label className="flex" htmlFor="instagramHandle">
-          <span className="flex items-center gap-2">
-            <Instagram className="size-4" />
-            Instagram (opcional)
-          </span>
-        </Label>
-        <div className="relative">
-          <span className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">
-            @
-          </span>
-          <Input
-            className="pl-7"
-            disabled={isInstagramConnected}
-            id="instagramHandle"
-            onChange={(e) =>
-              updateFormData({ instagramHandle: e.target.value.replace("@", "") })
-            }
-            placeholder="suaempresa"
-            value={formData.instagramHandle}
-          />
-        </div>
-        <p className="text-muted-foreground text-xs">
-          {isInstagramConnected 
-            ? "Instagram conectado na etapa anterior" 
-            : "Informe o Instagram da sua empresa para referência"}
-        </p>
-      </div>
+
     </div>
   );
 }

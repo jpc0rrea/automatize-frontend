@@ -248,6 +248,14 @@ export function StepReferenceImages({
               </>
             )}
           </label>
+
+        <div className="flex aspect-square flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
+          <img
+            src="https://scontent.cdninstagram.com/v/t51.82787-15/590420621_18012730766805642_3749992855690889421_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=102&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=aCE3OdiDcVAQ7kNvwHYygW2&_nc_oc=AdmCj-xF-_rMNLeHEGsmnkjoCuGxyzaXx5rR-Frw6GNKbZUYWKqxwKGm6StZCT-RkGx0sAl_sd7txKdn6KzVXEb4&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&edm=ANo9K5cEAAAA&_nc_gid=sfjTGKz0Gfu1_JBZ_tNQ_g&oh=00_AfkN8d9f49tzJJAS6lP7bZEMzTPIwd0y1uF9DndwjgRycg&oe=6941119D"
+            alt="Exemplo de referência visual"
+            className="size-full rounded-lg object-cover"
+          />
+        </div>
         </div>
       </div>
     </div>

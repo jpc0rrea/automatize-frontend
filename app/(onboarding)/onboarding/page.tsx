@@ -36,6 +36,7 @@ type InstagramAccount = {
   accountId: string;
   name?: string;
   website?: string;
+  profilePictureUrl?: string;
 };
 
 export default function OnboardingPage() {
@@ -61,7 +62,13 @@ export default function OnboardingPage() {
 
         if (data.connected && data.account) {
           setIsInstagramConnected(true);
-          setConnectedInstagramAccount(data.account);
+          setConnectedInstagramAccount({
+            username: data.account.username,
+            accountId: data.account.accountId,
+            name: data.account.name,
+            website: data.account.website,
+            profilePictureUrl: data.account.profilePictureUrl,
+          });
           
           // Pre-fill form fields from Instagram account data
           setFormData((prev) => ({
@@ -85,6 +92,7 @@ export default function OnboardingPage() {
     const username = searchParams.get("username");
     const instagramName = searchParams.get("name");
     const instagramWebsite = searchParams.get("website");
+    const instagramProfilePictureUrl = searchParams.get("profile_picture_url");
 
     if (instagramConnected === "true") {
       toast.success("Instagram conectado com sucesso!");
@@ -97,6 +105,7 @@ export default function OnboardingPage() {
           accountId: "",
           name: instagramName ?? undefined,
           website: instagramWebsite ?? undefined,
+          profilePictureUrl: instagramProfilePictureUrl ?? undefined,
         });
         setFormData((prev) => ({
           ...prev,
@@ -116,6 +125,7 @@ export default function OnboardingPage() {
       url.searchParams.delete("username");
       url.searchParams.delete("name");
       url.searchParams.delete("website");
+      url.searchParams.delete("profile_picture_url");
       window.history.replaceState({}, "", url.toString());
     } else if (instagramError === "true") {
       toast.error(errorMessage ?? "Erro ao conectar Instagram. Tente novamente.");
@@ -152,7 +162,13 @@ export default function OnboardingPage() {
 
       if (data.connected && data.account) {
         setIsInstagramConnected(true);
-        setConnectedInstagramAccount(data.account);
+        setConnectedInstagramAccount({
+          username: data.account.username,
+          accountId: data.account.accountId,
+          name: data.account.name,
+          website: data.account.website,
+          profilePictureUrl: data.account.profilePictureUrl,
+        });
       }
     } catch (error) {
       console.error("Error checking Instagram connection:", error);
@@ -261,43 +277,60 @@ export default function OnboardingPage() {
     <div className="w-full max-w-2xl">
       {/* Progress Steps */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        {/* Step circles and connectors */}
+        <div className="flex items-center">
           {STEPS.map((step, index) => (
             <div className="flex flex-1 items-center" key={step.id}>
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-full border-2 transition-colors",
-                    currentStep > step.id
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : currentStep === step.id
-                        ? "border-primary text-primary"
-                        : "border-muted text-muted-foreground"
-                  )}
-                >
-                  {currentStep > step.id ? (
-                    <Check className="size-5" />
-                  ) : (
-                    <span className="font-medium text-sm">{step.id}</span>
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "mt-2 hidden text-center text-xs sm:block",
-                    currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {step.title}
-                </span>
+              {/* Step circle */}
+              <div
+                className={cn(
+                  "z-10 flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                  currentStep > step.id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : currentStep === step.id
+                      ? "border-primary text-primary"
+                      : "border-muted text-muted-foreground"
+                )}
+              >
+                {currentStep > step.id ? (
+                  <Check className="size-5" />
+                ) : (
+                  <span className="font-medium text-sm">{step.id}</span>
+                )}
               </div>
+              {/* Connector line */}
               {index < STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "mx-2 h-0.5 flex-1 transition-colors",
-                    currentStep > step.id ? "bg-primary" : "bg-muted"
+                    "h-0.5 flex-1 transition-colors",
+                    // Both steps completed: solid primary
+                    currentStep > step.id && currentStep > STEPS[index + 1].id
+                      ? "bg-primary"
+                      // Current step completed but next is not: dashed
+                      : currentStep > step.id
+                        ? "border-t-2 border-dashed border-primary bg-transparent"
+                        // Neither completed: dashed muted
+                        : "border-t-2 border-dashed border-muted bg-transparent"
                   )}
                 />
               )}
+            </div>
+          ))}
+        </div>
+        {/* Step labels */}
+        <div className="mt-2 hidden sm:flex">
+          {STEPS.map((step, index) => (
+            <div className="flex flex-1 items-center" key={step.id}>
+              <span
+                className={cn(
+                  "size-10 shrink-0 text-center text-xs leading-tight flex items-center justify-center",
+                  currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
+                {step.title}
+              </span>
+              {/* Spacer to match connector line width */}
+              {index < STEPS.length - 1 && <div className="flex-1" />}
             </div>
           ))}
         </div>
@@ -319,7 +352,13 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 2 && (
-            <StepBasicInfo formData={formData} isInstagramConnected={isInstagramConnected} updateFormData={updateFormData} />
+            <StepBasicInfo
+              formData={formData}
+              instagramProfilePictureUrl={connectedInstagramAccount?.profilePictureUrl}
+              instagramUsername={connectedInstagramAccount?.username}
+              isInstagramConnected={isInstagramConnected}
+              updateFormData={updateFormData}
+            />
           )}
           {currentStep === 3 && (
             <StepExtraction
@@ -329,7 +368,11 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 4 && (
-            <StepBrandIdentity formData={formData} updateFormData={updateFormData} />
+            <StepBrandIdentity
+              formData={formData}
+              instagramProfilePictureUrl={connectedInstagramAccount?.profilePictureUrl}
+              updateFormData={updateFormData}
+            />
           )}
           {currentStep === 5 && (
             <StepReferenceImages

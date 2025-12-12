@@ -38,12 +38,12 @@ export type ExtractionResult = {
   };
 };
 
-export const BRAND_VOICE_OPTIONS: { value: BrandVoice; label: string; description: string }[] = [
-  { value: "formal", label: "Formal", description: "Linguagem corporativa e séria" },
-  { value: "casual", label: "Casual", description: "Descontraído e acessível" },
-  { value: "playful", label: "Divertido", description: "Leve e bem-humorado" },
-  { value: "professional", label: "Profissional", description: "Confiante e competente" },
-  { value: "friendly", label: "Amigável", description: "Caloroso e acolhedor" },
+export const BRAND_VOICE_OPTIONS: { value: BrandVoice; label: string; description: string; emoji: string }[] = [
+  { value: "formal", label: "Formal", description: "Linguagem corporativa e séria", emoji: "💼" },
+  { value: "casual", label: "Casual", description: "Descontraído e acessível", emoji: "😊" },
+  { value: "playful", label: "Divertido", description: "Leve e bem-humorado", emoji: "🎉" },
+  { value: "professional", label: "Profissional", description: "Confiante e competente", emoji: "👔" },
+  { value: "friendly", label: "Amigável", description: "Caloroso e acolhedor", emoji: "🤝" },
 ];
 
 export const CONTENT_FORMAT_OPTIONS = [

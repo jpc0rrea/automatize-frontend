@@ -36,6 +36,7 @@ export async function GET() {
         accountId: instagramAccount.accountId,
         name: instagramAccount.name,
         website: instagramAccount.website,
+        profilePictureUrl: instagramAccount.profilePictureUrl,
       })
       .from(instagramAccount)
       .where(
@@ -56,6 +57,7 @@ export async function GET() {
           accountId: account.accountId,
           name: account.name,
           website: account.website,
+          profilePictureUrl: account.profilePictureUrl,
         },
       });
     }
