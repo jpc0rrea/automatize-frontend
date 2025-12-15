@@ -1,64 +1,101 @@
-/**
- * Mapeamento de erros da API de Mídia do Instagram.
- * Baseado na documentação oficial:
- * https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/error-codes
- */
-
-import type { GraphErrorInfo } from "./types";
-
-/**
- * Interface padrão para erros de mídia do Instagram.
- */
-export interface InstagramMediaError {
-  /**
-   * Código HTTP do erro.
-   */
-  httpStatusCode: number;
-
-  /**
-   * Código de erro da API.
-   */
-  code: number;
-
-  /**
-   * Subcódigo de erro da API (quando disponível).
-   */
-  subcode?: number;
-
-  /**
-   * Mensagem de erro original em inglês.
-   */
-  originalMessage: string;
-
-  /**
-   * Título do erro traduzido para pt_BR.
-   */
-  title: string;
-
-  /**
-   * Mensagem de erro traduzida para pt_BR.
-   */
+export type GraphErrorInfo = {
   message: string;
-
-  /**
-   * Solução recomendada traduzida para pt_BR.
-   */
-  solution: string;
-
-  /**
-   * Indica se o erro é temporário/transiente.
-   */
-  isTransient: boolean;
-
-  /**
-   * Indica se o erro é relacionado à mídia.
-   */
-  isMediaError: boolean;
-
-  /**
-   * ID de rastreamento do Facebook (quando disponível).
-   */
+  type: string;
+  code: number;
+  errorSubcode?: number;
+  errorUserTitle?: string;
+  errorUserMsg?: string;
   fbtraceId?: string;
+};
+
+export type GraphErrorJSONResponse<T> = {
+  error: GraphErrorInfo & T;
+};
+
+export type GraphErrorReturn = {
+  statusCode: number;
+  reason: MappedError;
+  data?: GraphErrorInfo;
+};
+
+/**
+ * Custom error class for Graph API errors.
+ * Contains standardized error information from parseGraphError.
+ */
+export class GraphApiError extends Error {
+  readonly errorReturn: GraphErrorReturn;
+
+  constructor(errorReturn: GraphErrorReturn) {
+    super(errorReturn.reason.message);
+    this.name = "GraphApiError";
+    this.errorReturn = errorReturn;
+  }
+}
+
+/**
+ * Verifica se um objeto JSON é um erro do Graph API.
+ */
+function isGraphApiError(json: unknown): json is { error: unknown } {
+  return (
+    typeof json === "object" &&
+    json !== null &&
+    "error" in json &&
+    typeof (json as { error: unknown }).error === "object" &&
+    (json as { error: Record<string, unknown> }).error !== null
+  );
+}
+
+/**
+ * Verifica se um erro do Graph API tem a estrutura esperada.
+ */
+function isValidGraphErrorInfo(error: unknown): error is {
+  message: string;
+  type: string;
+  code: number;
+  error_subcode?: number;
+  error_user_title?: string;
+  error_user_msg?: string;
+  fbtrace_id?: string;
+} {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const err = error as Record<string, unknown>;
+  return (
+    typeof err["message"] === "string" &&
+    typeof err["type"] === "string" &&
+    typeof err["code"] === "number"
+  );
+}
+
+export function parseGraphError(json: unknown): GraphErrorReturn {
+  // Verifica se é um erro do Graph API formatado corretamente
+  if (isGraphApiError(json) && isValidGraphErrorInfo(json.error)) {
+    // É um erro do Graph API - mapeia para o formato padrão
+    const errorInfo: GraphErrorInfo = {
+      message: json.error.message,
+      type: json.error.type,
+      code: json.error.code,
+      errorSubcode: json.error.error_subcode,
+      errorUserTitle: json.error.error_user_title,
+      errorUserMsg: json.error.error_user_msg,
+      fbtraceId: json.error.fbtrace_id,
+    };
+
+    const mappedError = findMappedError(errorInfo.code, errorInfo.errorSubcode);
+
+    return {
+      statusCode: mappedError.httpStatusCode,
+      reason: mappedError,
+      data: errorInfo,
+    };
+  } else {
+    return {
+      statusCode: 500,
+      reason: genericError,
+    };
+  }
 }
 
 /**
@@ -71,6 +108,18 @@ interface MappedError {
   solution: string;
   isTransient: boolean;
 }
+
+/**
+ * Erro genérico para quando nenhum mapeamento é encontrado.
+ */
+export const genericError: MappedError = {
+  httpStatusCode: 500,
+  title: "Erro Desconhecido",
+  message: "Ocorreu um erro inesperado ao processar sua requisição.",
+  solution:
+    "Tente novamente. Se o problema persistir, entre em contato com o suporte.",
+  isTransient: true,
+};
 
 /**
  * Mapa de erros conhecidos da API do Instagram.
@@ -305,24 +354,165 @@ const errorMap: Record<string, MappedError> = {
       "O usuário excedeu o limite máximo de caracteres para legenda. Use uma legenda mais curta. Máximo: 2.200 caracteres, 30 hashtags e 20 tags @.",
     isTransient: false,
   },
-};
 
-/**
- * Erro genérico para quando nenhum mapeamento é encontrado.
- */
-const genericError: MappedError = {
-  httpStatusCode: 500,
-  title: "Erro Desconhecido",
-  message: "Ocorreu um erro inesperado ao processar sua mídia no Instagram.",
-  solution:
-    "Tente novamente. Se o problema persistir, entre em contato com o suporte.",
-  isTransient: true,
+  // Códigos gerais
+  "102": {
+    httpStatusCode: 401,
+    title: "Sessão da API",
+    message:
+      "O status de login ou o token de acesso expirou, foi revogado ou é inválido (sem subcódigo).",
+    solution: "Obtenha um novo token de acesso e tente novamente.",
+    isTransient: false,
+  },
+  "1": {
+    httpStatusCode: 503,
+    title: "API Desconhecida",
+    message:
+      "Possível problema temporário (inatividade) ou chamada a API inexistente.",
+    solution:
+      "Aguarde e tente novamente; se persistir, valide se a API/endpoint existe.",
+    isTransient: true,
+  },
+  "2": {
+    httpStatusCode: 503,
+    title: "Serviço de API",
+    message: "Problema temporário devido à inatividade.",
+    solution: "Aguarde um pouco e refaça a operação.",
+    isTransient: true,
+  },
+  "3": {
+    httpStatusCode: 403,
+    title: "Método de API",
+    message: "Problema envolvendo recursos ou permissões.",
+    solution:
+      "Verifique permissões/scopes e se o recurso está disponível para o app/usuário.",
+    isTransient: false,
+  },
+  "4": {
+    httpStatusCode: 429,
+    title: "Muitas Chamadas de API",
+    message: "Limitação temporária (rate limit).",
+    solution:
+      "Aguarde e tente novamente; reduza o volume de requisições (backoff/jitter).",
+    isTransient: true,
+  },
+  "17": {
+    httpStatusCode: 429,
+    title: "Muitas Chamadas de Usuário",
+    message: "Limitação temporária por usuário (rate limit).",
+    solution: "Aguarde e tente novamente; aplique backoff/jitter por usuário.",
+    isTransient: true,
+  },
+  "10": {
+    httpStatusCode: 403,
+    title: "Permissão Negada",
+    message: "A permissão não foi concedida ou foi removida.",
+    solution:
+      "Revisar permissões/scopes e solicitar novamente a autorização do usuário.",
+    isTransient: false,
+  },
+  "190": {
+    httpStatusCode: 401,
+    title: "Token de Acesso Expirou",
+    message: "O token de acesso expirou, foi revogado ou é inválido.",
+    solution: "Obtenha um novo token (reauth/refresh) e tente novamente.",
+    isTransient: false,
+  },
+  // Observação: 200-299 é uma faixa; se você quiser tratar via mapa, use o helper de range (abaixo).
+  "341": {
+    httpStatusCode: 429,
+    title: "Limite do Aplicativo Atingido",
+    message: "Limite/indisponibilidade temporária (app-level).",
+    solution:
+      "Aguarde e tente novamente; reduza o volume e implemente backoff.",
+    isTransient: true,
+  },
+  "368": {
+    httpStatusCode: 429,
+    title: "Bloqueado Temporariamente",
+    message: "Bloqueio temporário por violações de políticas.",
+    solution:
+      "Aguarde e refaça a operação (evite padrões que pareçam automação/spam).",
+    isTransient: true,
+  },
+  "506": {
+    httpStatusCode: 400,
+    title: "Publicação Duplicada",
+    message:
+      "Publicações duplicadas não podem ser publicadas consecutivamente.",
+    solution: "Altere o conteúdo da publicação e tente novamente.",
+    isTransient: false,
+  },
+  "1609005": {
+    httpStatusCode: 400,
+    title: "Erro ao Publicar Link",
+    message: "Problema ao detalhar os dados do link fornecido.",
+    solution:
+      "Verifique a URL (válida, acessível, com metadados) e tente novamente.",
+    isTransient: false,
+  },
+
+  // Códigos “de autenticação” (você pediu code-only, então entram como chaves simples)
+  "190_458": {
+    httpStatusCode: 401,
+    title: "App Não Instalado",
+    message: "O usuário não fez login no app.",
+    solution: "Autentique o usuário novamente (login/consent).",
+    isTransient: false,
+  },
+  "190_459": {
+    httpStatusCode: 401,
+    title: "Usuário em Checkpoint",
+    message: "O usuário precisa corrigir um problema no Facebook.",
+    solution:
+      "O usuário deve entrar no Facebook (web/mobile) e concluir o checkpoint.",
+    isTransient: false,
+  },
+  "190_460": {
+    httpStatusCode: 401,
+    title: "Senha Alterada",
+    message: "A senha do usuário foi alterada; sessão atual ficou inválida.",
+    solution:
+      "Solicite login novamente (e no iOS, seguir o fluxo recomendado pelo SO se aplicável).",
+    isTransient: false,
+  },
+  "190_463": {
+    httpStatusCode: 401,
+    title: "Expirado",
+    message: "O login/token expirou ou foi revogado.",
+    solution: "Obtenha um novo token e tente novamente.",
+    isTransient: false,
+  },
+  "190_464": {
+    httpStatusCode: 401,
+    title: "Usuário Não Confirmado",
+    message: "O usuário precisa corrigir um problema no Facebook.",
+    solution:
+      "O usuário deve entrar no Facebook (web/mobile) e concluir a confirmação.",
+    isTransient: false,
+  },
+  "190_467": {
+    httpStatusCode: 401,
+    title: "Token de Acesso Inválido",
+    message: "O token de acesso expirou, foi revogado ou está inválido.",
+    solution: "Obtenha um novo token e tente novamente.",
+    isTransient: false,
+  },
+  "190_492": {
+    httpStatusCode: 403,
+    title: "Sessão Inválida",
+    message:
+      "O usuário associado ao token de Página não possui função apropriada na Página.",
+    solution:
+      "Garanta que o usuário tenha a role correta na Página e reautentique.",
+    isTransient: false,
+  },
 };
 
 /**
  * Encontra o erro mapeado baseado no código e subcódigo.
  */
-function findMappedError(code: number, subcode?: number): MappedError {
+export function findMappedError(code: number, subcode?: number): MappedError {
   // Primeiro tenta encontrar pelo código + subcódigo específico
   if (subcode !== undefined) {
     const specificKey = `${code}_${subcode}`;
@@ -342,163 +532,26 @@ function findMappedError(code: number, subcode?: number): MappedError {
 }
 
 /**
- * Converte um erro do Graph API para o formato padronizado InstagramMediaError.
- *
- * @param graphError - Erro retornado pela API do Graph (GraphErrorInfo)
- * @returns Erro padronizado com tradução pt_BR
- *
- * @example
- * ```typescript
- * const response = await publishMediaContainer({ ... });
- * if ('error' in response) {
- *   const standardError = parseInstagramMediaError(response.error);
- *   console.log(standardError.message); // Mensagem em português
- * }
- * ```
+ * Converts an error to GraphErrorReturn format.
+ * Handles GraphApiError instances and other errors.
  */
-export function parseInstagramMediaError(
-  graphError: GraphErrorInfo
-): InstagramMediaError {
-  const mappedError = findMappedError(graphError.code, graphError.errorSubcode);
+export function errorToGraphErrorReturn(error: unknown): GraphErrorReturn {
+  if (error instanceof GraphApiError) {
+    return error.errorReturn;
+  }
+
+  // For non-GraphApiError, create a generic error return
+  const errorMessage = error instanceof Error ? error.message : String(error);
 
   return {
-    httpStatusCode: mappedError.httpStatusCode,
-    code: graphError.code,
-    subcode: graphError.errorSubcode,
-    originalMessage: graphError.message,
-    title: mappedError.title,
-    message: mappedError.message,
-    solution: mappedError.solution,
-    isTransient: mappedError.isTransient,
-    isMediaError: true,
-    fbtraceId: graphError.fbtraceId,
+    statusCode: 500,
+    reason: {
+      httpStatusCode: 500,
+      title: "Internal server error",
+      message: errorMessage,
+      solution:
+        "Tente novamente. Se o problema persistir, entre em contato com o suporte.",
+      isTransient: true,
+    },
   };
 }
-
-/**
- * Converte uma mensagem de erro genérica para o formato padronizado.
- * Útil quando o erro não veio diretamente da API do Graph.
- *
- * @param message - Mensagem de erro
- * @param code - Código de erro opcional
- * @returns Erro padronizado com tradução pt_BR
- */
-export function createGenericInstagramMediaError(
-  message: string,
-  code = -1
-): InstagramMediaError {
-  return {
-    httpStatusCode: 500,
-    code,
-    originalMessage: message,
-    title: genericError.title,
-    message: genericError.message,
-    solution: genericError.solution,
-    isTransient: true,
-    isMediaError: true,
-  };
-}
-
-/**
- * Verifica se um erro do Graph API é um erro de mídia do Instagram.
- *
- * @param error - Qualquer objeto de erro
- * @returns true se for um erro reconhecido de mídia do Instagram
- */
-export function isInstagramMediaError(error: unknown): error is GraphErrorInfo {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  const errorObj = error as Record<string, unknown>;
-  return (
-    typeof errorObj["message"] === "string" &&
-    typeof errorObj["code"] === "number" &&
-    typeof errorObj["type"] === "string"
-  );
-}
-
-/**
- * Tenta extrair e parsear um erro de mídia do Instagram de qualquer fonte.
- *
- * @param error - Erro de qualquer tipo (Error, string JSON, objeto, etc.)
- * @returns Erro padronizado ou null se não for possível parsear
- *
- * @example
- * ```typescript
- * try {
- *   await publishMediaContainer({ ... });
- * } catch (err) {
- *   const standardError = tryParseInstagramMediaError(err);
- *   if (standardError) {
- *     toast.error(standardError.message);
- *   }
- * }
- * ```
- */
-export function tryParseInstagramMediaError(
-  error: unknown
-): InstagramMediaError | null {
-  // Se já é um GraphErrorInfo válido
-  if (isInstagramMediaError(error)) {
-    return parseInstagramMediaError(error);
-  }
-
-  // Se é um Error com mensagem JSON
-  if (error instanceof Error) {
-    try {
-      const parsed = JSON.parse(error.message) as unknown;
-      if (typeof parsed === "object" && parsed !== null && "error" in parsed) {
-        const graphResponse = parsed as { error: unknown };
-        if (isInstagramMediaError(graphResponse.error)) {
-          return parseInstagramMediaError(graphResponse.error);
-        }
-      }
-    } catch {
-      // Não é JSON, criar erro genérico
-      return createGenericInstagramMediaError(error.message);
-    }
-  }
-
-  // Se é uma string, tentar parsear como JSON
-  if (typeof error === "string") {
-    try {
-      const parsed = JSON.parse(error) as unknown;
-      if (isInstagramMediaError(parsed)) {
-        return parseInstagramMediaError(parsed);
-      }
-      if (typeof parsed === "object" && parsed !== null && "error" in parsed) {
-        const graphResponse = parsed as { error: unknown };
-        if (isInstagramMediaError(graphResponse.error)) {
-          return parseInstagramMediaError(graphResponse.error);
-        }
-      }
-    } catch {
-      // Não é JSON
-      return createGenericInstagramMediaError(error);
-    }
-  }
-
-  // Se é um objeto com propriedade error
-  if (typeof error === "object" && error !== null && "error" in error) {
-    const errorObj = error as { error: unknown };
-    if (isInstagramMediaError(errorObj.error)) {
-      return parseInstagramMediaError(errorObj.error);
-    }
-  }
-
-  return null;
-}
-
-/**
- * Lista de todos os códigos de erro conhecidos.
- * Útil para debug e documentação.
- */
-export const knownErrorCodes = Object.keys(errorMap).map((key) => {
-  const parts = key.split("_");
-  return {
-    code: Number(parts[0]),
-    subcode: parts[1] ? Number(parts[1]) : undefined,
-    ...errorMap[key],
-  };
-});

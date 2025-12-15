@@ -2,29 +2,22 @@
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import {
-  and,
-  eq,
-  inArray,
-  isNull,
-  lte,
-  lt,
-  sql,
-} from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createMediaContainer } from "@/lib/meta-business/instagram/create-media-container";
 import { getMediaContainerStatus } from "@/lib/meta-business/instagram/get-media-container-status";
 import { publishMediaContainer } from "@/lib/meta-business/instagram/publish-media-container";
 import {
   ContainerStatusCode,
-  GraphErrorResponse,
-  GraphResult,
+  CreateMediaContainerResult,
+  GetContainerStatusResult,
 } from "@/lib/meta-business/instagram/types";
 import {
-  instagramAccount,
-  scheduledPost,
-  user,
-} from "@/lib/db/schema";
+  errorToGraphErrorReturn,
+  GraphApiError,
+  GraphErrorReturn,
+} from "@/lib/meta-business/error";
+import { instagramAccount, scheduledPost, user } from "@/lib/db/schema";
 
 // Initialize database connection
 // biome-ignore lint: Forbidden non-null assertion.
@@ -41,26 +34,6 @@ const maxRetryAttempt = Number(
 
 // avoid doing too much work in one run
 const maxBatchSize = 50;
-
-function errorToString(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function graphErrorToString(err: GraphErrorResponse["error"]): string {
-  const base = `[${err.type} - ${err.code}] ${err.message}`;
-  const subcode = err.errorSubcode ? ` (subcode: ${err.errorSubcode})` : "";
-  const userMsg = err.errorUserMsg ? ` | user_msg: ${err.errorUserMsg}` : "";
-  return `${base}${subcode}${userMsg}`;
-}
-
-function isGraphError<T>(result: GraphResult<T>): result is GraphErrorResponse {
-  return (result as GraphErrorResponse).error !== undefined;
-}
 
 function isTerminalContainerErrorStatus(status: ContainerStatusCode): boolean {
   // For now, treat only "ERROR" as terminal; you can expand this logic later
@@ -205,29 +178,15 @@ export async function GET() {
         accessToken: instagramAccountData.accessToken,
       });
 
-      if (isGraphError(result)) {
-        const newRetryAttempts = postData.retryAttempts + 1;
-        const isFailure = newRetryAttempts >= maxRetryAttempt;
-
-        await db
-          .update(scheduledPost)
-          .set({
-            retryAttempts: newRetryAttempts,
-            lastAttemptAt: now,
-            lastErrorMessage: graphErrorToString(result.error),
-            status: isFailure ? "failure" : "retry",
-          })
-          .where(eq(scheduledPost.id, postData.id));
-
-        summary.container_errors += 1;
-        continue;
-      }
+      // Since createMediaContainer throws GraphApiError on error,
+      // if we get here, result is CreateMediaContainerResult
+      const containerResult = result as CreateMediaContainerResult;
 
       // Success: we got a container id
       await db
         .update(scheduledPost)
         .set({
-          mediaContainerId: result.id,
+          mediaContainerId: containerResult.id,
           mediaContainerStatus: "IN_PROGRESS",
           lastAttemptAt: now,
           lastErrorMessage: null,
@@ -239,12 +198,14 @@ export async function GET() {
       const newRetryAttempts = postData.retryAttempts + 1;
       const isFailure = newRetryAttempts >= maxRetryAttempt;
 
+      const errorReturn = errorToGraphErrorReturn(error);
+
       await db
         .update(scheduledPost)
         .set({
           retryAttempts: newRetryAttempts,
           lastAttemptAt: now,
-          lastErrorMessage: errorToString(error),
+          lastErrorMessage: JSON.stringify(errorReturn),
           status: isFailure ? "failure" : "retry",
         })
         .where(eq(scheduledPost.id, postData.id));
@@ -370,34 +331,20 @@ export async function GET() {
         accessToken: instagramAccountData.accessToken,
       });
 
-      if (isGraphError(result)) {
-        const newRetryAttempts = postData.retryAttempts + 1;
-        const isFailure = newRetryAttempts >= maxRetryAttempt;
-
-        await db
-          .update(scheduledPost)
-          .set({
-            retryAttempts: newRetryAttempts,
-            lastAttemptAt: now,
-            lastErrorMessage: graphErrorToString(result.error),
-            status: isFailure ? "failure" : "retry",
-          })
-          .where(eq(scheduledPost.id, postData.id));
-
-        summary.container_errors += 1;
-        continue;
-      }
+      // Since getMediaContainerStatus throws GraphApiError on error,
+      // if we get here, result is GetContainerStatusResult
+      const statusResult = result as GetContainerStatusResult;
 
       summary.containers_checked += 1;
 
       await db
         .update(scheduledPost)
         .set({
-          mediaContainerStatus: result.status_code,
+          mediaContainerStatus: statusResult.status_code,
         })
         .where(eq(scheduledPost.id, postData.id));
 
-      if (result.status_code === "FINISHED") {
+      if (statusResult.status_code === "FINISHED") {
         summary.containers_finished += 1;
 
         postsWithFinishedContainers.push({
@@ -407,7 +354,7 @@ export async function GET() {
           access_token: instagramAccountData.accessToken,
           media_container_id: postData.mediaContainerId,
         });
-      } else if (isTerminalContainerErrorStatus(result.status_code)) {
+      } else if (isTerminalContainerErrorStatus(statusResult.status_code)) {
         const newRetryAttempts = postData.retryAttempts + 1;
         const isFailure = newRetryAttempts >= maxRetryAttempt;
 
@@ -416,7 +363,7 @@ export async function GET() {
           .set({
             retryAttempts: newRetryAttempts,
             lastAttemptAt: now,
-            lastErrorMessage: `Container error status: ${result.status_code}`,
+            lastErrorMessage: `Container error status: ${statusResult.status_code}`,
             status: isFailure ? "failure" : "retry",
           })
           .where(eq(scheduledPost.id, postData.id));
@@ -427,12 +374,14 @@ export async function GET() {
       const newRetryAttempts = postData.retryAttempts + 1;
       const isFailure = newRetryAttempts >= maxRetryAttempt;
 
+      const errorReturn = errorToGraphErrorReturn(error);
+
       await db
         .update(scheduledPost)
         .set({
           retryAttempts: newRetryAttempts,
           lastAttemptAt: now,
-          lastErrorMessage: errorToString(error),
+          lastErrorMessage: JSON.stringify(errorReturn),
           status: isFailure ? "failure" : "retry",
         })
         .where(eq(scheduledPost.id, postData.id));
@@ -488,29 +437,14 @@ export async function GET() {
     }
 
     try {
-      const result = await publishMediaContainer({
+      await publishMediaContainer({
         creationId: scheduledPostData.mediaContainerId,
         igUserId: item.instagram_user_id,
         accessToken: item.access_token,
       });
 
-      if (isGraphError(result)) {
-        const newRetryAttempts = scheduledPostData.retryAttempts + 1;
-        const isFailure = newRetryAttempts >= maxRetryAttempt;
-
-        await db
-          .update(scheduledPost)
-          .set({
-            retryAttempts: newRetryAttempts,
-            lastAttemptAt: now,
-            lastErrorMessage: graphErrorToString(result.error),
-            status: isFailure ? "failure" : "retry",
-          })
-          .where(eq(scheduledPost.id, scheduledPostData.id));
-
-        summary.published_failure += 1;
-        continue;
-      }
+      // Since publishMediaContainer throws GraphApiError on error,
+      // if we get here, the publish was successful
 
       await db
         .update(scheduledPost)
@@ -527,12 +461,14 @@ export async function GET() {
       const newRetryAttempts = scheduledPostData.retryAttempts + 1;
       const isFailure = newRetryAttempts >= maxRetryAttempt;
 
+      const errorReturn = errorToGraphErrorReturn(error);
+
       await db
         .update(scheduledPost)
         .set({
           retryAttempts: newRetryAttempts,
           lastAttemptAt: now,
-          lastErrorMessage: errorToString(error),
+          lastErrorMessage: JSON.stringify(errorReturn),
           status: isFailure ? "failure" : "retry",
         })
         .where(eq(scheduledPost.id, scheduledPostData.id));

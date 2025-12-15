@@ -3,7 +3,7 @@ import {
   graphFacebookBaseUrl,
   graphInstagramBaseUrl,
 } from "./constant";
-import { GraphErrorInfo, GraphErrorResponse } from "./instagram/types";
+import { genericError, GraphApiError, parseGraphError, type GraphErrorReturn } from "./error";
 
 export type MetaApiCallParams = {
   domain?: "FACEBOOK" | "INSTAGRAM";
@@ -23,43 +23,72 @@ export async function metaApiCall<T>({
   accessToken,
 }: MetaApiCallParams): Promise<T> {
   if (!accessToken) {
-    throw new Error("Access token is required");
+    throw new GraphApiError({
+      statusCode: 400,
+      reason: {
+        httpStatusCode: 400,
+        title: "Token de acesso é obrigatório",
+        message: "Token de acesso é obrigatório",
+        solution: "Forneça um token de acesso válido",
+        isTransient: false,
+      },
+    });
   }
 
   const baseGraphUrl =
     domain === "FACEBOOK" ? graphFacebookBaseUrl : graphInstagramBaseUrl;
 
   const url = `${baseGraphUrl}/${graphApiVersion}/${path}?${params}&access_token=${accessToken}`;
-  const response = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
 
-  if (!response.ok) {
-    const json = await response.json().catch(() => undefined);
-    // Tenta mapear o erro no formato padrão do Graph API
-    const errorInfo: GraphErrorInfo = json?.error
-      ? {
-          message: json.error.message,
-          type: json.error.type,
-          code: json.error.code,
-          errorSubcode: json.error.error_subcode,
-          errorUserTitle: json.error.error_user_title,
-          errorUserMsg: json.error.error_user_msg,
-          fbtraceId: json.error.fbtrace_id,
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      // Tenta parsear a resposta como JSON
+      let json: unknown;
+      try {
+        json = await response.json();
+      } catch {
+        // Se não conseguir parsear JSON, é um erro não mapeado (ex: HTML error page)
+        throw new GraphApiError({
+          statusCode: response.status,
+          reason: genericError,
+          data: undefined,
+        });
+      }
+
+      // Usa parseGraphError para identificar e mapear erros do Graph API
+      const errorReturn = parseGraphError(json);
+      
+      // Se é um erro do Graph API mapeado, lança GraphApiError
+      if (errorReturn.data) {
+        throw new GraphApiError(errorReturn);
+      }
+
+      // Não é um erro do Graph API formatado - lança erro genérico
+      throw new GraphApiError(
+        {
+          statusCode: response.status,
+          reason: genericError,
+          data: undefined,
         }
-      : {
-          message: `Graph API request failed with status ${response.status}`,
-          type: "UnknownError",
-          code: response.status,
-        };
+      );
+    }
 
-    const errorResponse: GraphErrorResponse = { error: errorInfo };
-    throw new Error(JSON.stringify(errorResponse));
+    return response.json() as Promise<T>;
+  } catch (error) {
+    // Se já é um GraphApiError, relança
+    if (error instanceof GraphApiError) {
+      throw error;
+    }
+
+    // Se é um erro de rede ou outro erro não mapeado, relança
+    throw error;
   }
-
-  return response.json() as Promise<T>;
 }

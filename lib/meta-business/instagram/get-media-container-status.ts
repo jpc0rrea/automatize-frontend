@@ -3,9 +3,7 @@ import { metaApiCall } from "../api";
 import {
   GetContainerStatusInput,
   GetContainerStatusResult,
-  GraphErrorResponse,
   GraphResult,
-  GraphErrorInfo,
 } from "./types";
 
 /**
@@ -19,41 +17,13 @@ export async function getMediaContainerStatus(
 ): Promise<GraphResult<GetContainerStatusResult>> {
   const { igContainerId, accessToken } = input;
 
-  try {
-    const response = await metaApiCall<GetContainerStatusResult>({
-      domain: "INSTAGRAM",
-      method: "GET",
-      path: igContainerId,
-      params: "fields=status_code,status",
-      accessToken,
-    });
+  const response = await metaApiCall<GetContainerStatusResult>({
+    domain: "INSTAGRAM",
+    method: "GET",
+    path: igContainerId,
+    params: "fields=status_code,status",
+    accessToken,
+  });
 
-    return response;
-  } catch (err) {
-    // metaApiCall throws errors as JSON stringified GraphErrorResponse
-    let errorInfo: GraphErrorInfo;
-
-    if (err instanceof Error) {
-      try {
-        const parsedError = JSON.parse(err.message) as GraphErrorResponse;
-        return parsedError;
-      } catch {
-        // If parsing fails, treat as network error
-        errorInfo = {
-          message: err.message,
-          type: "NetworkError",
-          code: -1,
-        };
-      }
-    } else {
-      errorInfo = {
-        message: "Network or unexpected error",
-        type: "NetworkError",
-        code: -1,
-      };
-    }
-
-    const errorResponse: GraphErrorResponse = { error: errorInfo };
-    return errorResponse;
-  }
+  return response;
 }

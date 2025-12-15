@@ -9,8 +9,15 @@ import type { ScheduledPost } from "@/lib/db/schema";
 import { createMediaContainer } from "@/lib/meta-business/instagram/create-media-container";
 import { getMediaContainerStatus } from "@/lib/meta-business/instagram/get-media-container-status";
 import { publishMediaContainer } from "@/lib/meta-business/instagram/publish-media-container";
-import { graphErrorToString } from "@/lib/meta-business/graph-error-to-string";
-import { isGraphError } from "@/lib/meta-business/is-graph-error";
+import {
+  CreateMediaContainerResult,
+  GetContainerStatusResult,
+} from "@/lib/meta-business/instagram/types";
+import {
+  errorToGraphErrorReturn,
+  GraphApiError,
+  GraphErrorReturn,
+} from "@/lib/meta-business/error";
 import { NextRequest, NextResponse } from "next/server";
 import type { ScheduledPostResponse } from "../route";
 
@@ -24,7 +31,9 @@ function errorToString(error: unknown): string {
   }
 }
 
-function formatScheduledPostResponse(post: ScheduledPost): ScheduledPostResponse {
+function formatScheduledPostResponse(
+  post: ScheduledPost
+): ScheduledPostResponse {
   return {
     id: post.id,
     userId: post.userId,
@@ -76,7 +85,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(formatScheduledPostResponse(post), { status: 200 });
+    return NextResponse.json(formatScheduledPostResponse(post), {
+      status: 200,
+    });
   } catch (error) {
     console.error("Error fetching scheduled post:", error);
     return NextResponse.json(
@@ -163,31 +174,16 @@ export async function POST(
 
         const result = await createMediaContainer(createInput);
 
-        if (isGraphError(result)) {
-          const newRetryAttempts = scheduledPostData.retryAttempts + 1;
-
-          scheduledPostData = await updateScheduledPost({
-            id: scheduledPostData.id,
-            userId,
-            data: {
-              retryAttempts: newRetryAttempts,
-              lastAttemptAt: now,
-              lastErrorMessage: graphErrorToString(result.error),
-              status: "retry",
-            },
-          });
-
-          return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-            status: 200,
-          });
-        }
+        // Since createMediaContainer throws GraphApiError on error,
+        // if we get here, result is CreateMediaContainerResult
+        const containerResult = result as CreateMediaContainerResult;
 
         // Success: we got a container id
         scheduledPostData = await updateScheduledPost({
           id: scheduledPostData.id,
           userId,
           data: {
-            mediaContainerId: result.id,
+            mediaContainerId: containerResult.id,
             mediaContainerStatus: "IN_PROGRESS",
             lastAttemptAt: now,
             lastErrorMessage: null,
@@ -196,20 +192,26 @@ export async function POST(
       } catch (error) {
         const newRetryAttempts = scheduledPostData.retryAttempts + 1;
 
+        // Handle GraphApiError with standardized error interface
+        const errorReturn = errorToGraphErrorReturn(error);
+
         scheduledPostData = await updateScheduledPost({
           id: scheduledPostData.id,
           userId,
           data: {
             retryAttempts: newRetryAttempts,
             lastAttemptAt: now,
-            lastErrorMessage: errorToString(error),
+            lastErrorMessage: JSON.stringify(errorReturn),
             status: "retry",
           },
         });
 
-        return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-          status: 200,
-        });
+        return NextResponse.json(
+          formatScheduledPostResponse(scheduledPostData),
+          {
+            status: 200,
+          }
+        );
       }
     }
 
@@ -229,36 +231,21 @@ export async function POST(
           accessToken,
         });
 
-        if (isGraphError(result)) {
-          const newRetryAttempts = scheduledPostData.retryAttempts + 1;
-
-          scheduledPostData = await updateScheduledPost({
-            id: scheduledPostData.id,
-            userId,
-            data: {
-              retryAttempts: newRetryAttempts,
-              lastAttemptAt: now,
-              lastErrorMessage: graphErrorToString(result.error),
-              status: "retry",
-            },
-          });
-
-          return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-            status: 200,
-          });
-        }
+        // Since getMediaContainerStatus throws GraphApiError on error,
+        // if we get here, result is GetContainerStatusResult
+        const statusResult = result as GetContainerStatusResult;
 
         // Update container status
         scheduledPostData = await updateScheduledPost({
           id: scheduledPostData.id,
           userId,
           data: {
-            mediaContainerStatus: result.status_code,
+            mediaContainerStatus: statusResult.status_code,
           },
         });
 
         // If status is ERROR, mark as retry/failure
-        if (result.status_code === "ERROR") {
+        if (statusResult.status_code === "ERROR") {
           const newRetryAttempts = scheduledPostData.retryAttempts + 1;
 
           scheduledPostData = await updateScheduledPost({
@@ -267,17 +254,23 @@ export async function POST(
             data: {
               retryAttempts: newRetryAttempts,
               lastAttemptAt: now,
-              lastErrorMessage: `Container error status: ${result.status_code}`,
+              lastErrorMessage: `Container error status: ${statusResult.status_code}`,
               status: "retry",
             },
           });
 
-          return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-            status: 200,
-          });
+          return NextResponse.json(
+            formatScheduledPostResponse(scheduledPostData),
+            {
+              status: 200,
+            }
+          );
         }
       } catch (error) {
         const newRetryAttempts = scheduledPostData.retryAttempts + 1;
+
+        // Handle GraphApiError with standardized error interface
+        const errorReturn = errorToGraphErrorReturn(error);
 
         scheduledPostData = await updateScheduledPost({
           id: scheduledPostData.id,
@@ -285,14 +278,17 @@ export async function POST(
           data: {
             retryAttempts: newRetryAttempts,
             lastAttemptAt: now,
-            lastErrorMessage: errorToString(error),
+            lastErrorMessage: JSON.stringify(errorReturn),
             status: "retry",
           },
         });
 
-        return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-          status: 200,
-        });
+        return NextResponse.json(
+          formatScheduledPostResponse(scheduledPostData),
+          {
+            status: 200,
+          }
+        );
       }
     }
 
@@ -308,30 +304,11 @@ export async function POST(
         scheduledPostData.status === "retry")
     ) {
       try {
-        const result = await publishMediaContainer({
+        await publishMediaContainer({
           creationId: scheduledPostData.mediaContainerId,
           igUserId,
           accessToken,
         });
-
-        if (isGraphError(result)) {
-          const newRetryAttempts = scheduledPostData.retryAttempts + 1;
-
-          scheduledPostData = await updateScheduledPost({
-            id: scheduledPostData.id,
-            userId,
-            data: {
-              retryAttempts: newRetryAttempts,
-              lastAttemptAt: now,
-              lastErrorMessage: graphErrorToString(result.error),
-              status: "retry",
-            },
-          });
-
-          return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-            status: 200,
-          });
-        }
 
         // Success: post published
         scheduledPostData = await updateScheduledPost({
@@ -347,20 +324,26 @@ export async function POST(
       } catch (error) {
         const newRetryAttempts = scheduledPostData.retryAttempts + 1;
 
+        // Handle GraphApiError with standardized error interface
+        const errorReturn = errorToGraphErrorReturn(error);
+
         scheduledPostData = await updateScheduledPost({
           id: scheduledPostData.id,
           userId,
           data: {
             retryAttempts: newRetryAttempts,
             lastAttemptAt: now,
-            lastErrorMessage: errorToString(error),
+            lastErrorMessage: JSON.stringify(errorReturn),
             status: "retry",
           },
         });
 
-        return NextResponse.json(formatScheduledPostResponse(scheduledPostData), {
-          status: 200,
-        });
+        return NextResponse.json(
+          formatScheduledPostResponse(scheduledPostData),
+          {
+            status: 200,
+          }
+        );
       }
     }
 

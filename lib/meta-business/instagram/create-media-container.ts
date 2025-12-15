@@ -4,8 +4,6 @@ import {
   CreateMediaContainerInput,
   CreateMediaContainerResult,
   GraphResult,
-  GraphErrorResponse,
-  GraphErrorInfo,
 } from "./types"; // ajuste o caminho conforme seu projeto
 
 /**
@@ -59,35 +57,22 @@ export async function createMediaContainer(
     }
   }
 
-  try {
-    console.log("TODELETE Creating media container...", body.toString());
-    const response = await metaApiCall<CreateMediaContainerResult>({
-      domain: "INSTAGRAM",
-      method: "POST",
-      path: `${input.igUserId}/media`,
-      params: "",
-      body: body.toString(),
-      accessToken: input.accessToken,
-    });
+  console.log("TODELETE Creating media container...", body.toString());
+  const response = await metaApiCall<CreateMediaContainerResult>({
+    domain: "INSTAGRAM",
+    method: "POST",
+    path: `${input.igUserId}/media`,
+    params: "",
+    body: body.toString(),
+    accessToken: input.accessToken,
+  });
 
-    const json = response;
+  const json = response;
 
-    // Sucesso: resposta deve ser { id: "..." }
-    const result: CreateMediaContainerResult = {
-      id: json.id,
-    };
+  // Sucesso: resposta deve ser { id: "..." }
+  const result: CreateMediaContainerResult = {
+    id: json.id,
+  };
 
-    return result;
-  } catch (err) {
-    console.error("TODELETE Error creating media container...", err);
-    const errorInfo: GraphErrorInfo = {
-      message:
-        err instanceof Error ? err.message : "Network or unexpected error",
-      type: "NetworkError",
-      code: -1,
-    };
-
-    const errorResponse: GraphErrorResponse = { error: errorInfo };
-    return errorResponse;
-  }
+  return result;
 }
