@@ -154,14 +154,15 @@ const PurePreviewMessage = ({
 
             if (type === "tool-generateImage") {
               const { toolCallId, state } = part;
-              const isGenerating = state === "input-streaming";
+              // Show generating state for both streaming and running states
+              const isGenerating = state === "input-streaming" || state === "input-available";
 
               return (
                 <ImagePreview
                   isGenerating={isGenerating}
                   isReadonly={isReadonly}
                   key={toolCallId}
-                  result={state === "output-available" ? part.output : { id: toolCallId, title: part.input?.title ?? "" }}
+                  result={state === "output-available" ? part.output : state === "output-error" ? { id: toolCallId, title: part.input?.title ?? "", status: "failed", error: part.errorText ?? "Unknown error" } : { id: toolCallId, title: part.input?.title ?? "" }}
                 />
               );
             }
