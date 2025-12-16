@@ -277,10 +277,6 @@ export async function GET(
       accessToken,
     });
 
-    console.log("TODELETE response", {
-      response: response.data[0].adsets?.data,
-    });
-
     // Transform response to camelCase
     const campaigns = response.data.map(transformCampaign);
     const pagination = transformPaging(response.paging);
