@@ -403,6 +403,14 @@ const errorMap: Record<string, MappedError> = {
     solution: "Aguarde e tente novamente; aplique backoff/jitter por usuário.",
     isTransient: true,
   },
+  "613": {
+    httpStatusCode: 429,
+    title: "Limite de Taxa Excedido",
+    message: "As chamadas para esta API excederam o limite de taxa.",
+    solution:
+      "Aguarde um pouco e tente novamente. Reduza o volume de requisições e implemente backoff exponencial.",
+    isTransient: true,
+  },
   "10": {
     httpStatusCode: 403,
     title: "Permissão Negada",
@@ -451,8 +459,24 @@ const errorMap: Record<string, MappedError> = {
       "Verifique a URL (válida, acessível, com metadados) e tente novamente.",
     isTransient: false,
   },
+  "2500": {
+    httpStatusCode: 400,
+    title: "Erro ao Analisar Consulta Graph",
+    message: "Erro ao analisar a consulta Graph.",
+    solution:
+      "Verifique a sintaxe da consulta Graph e os parâmetros fornecidos. Certifique-se de que todos os campos e relacionamentos estão corretos.",
+    isTransient: false,
+  },
+  "1150": {
+    httpStatusCode: 500,
+    title: "Erro Desconhecido",
+    message: "Ocorreu um erro desconhecido.",
+    solution:
+      "Tente novamente. Se o problema persistir, verifique os logs e contate o suporte.",
+    isTransient: true,
+  },
 
-  // Códigos “de autenticação” (você pediu code-only, então entram como chaves simples)
+  // Códigos "de autenticação" (você pediu code-only, então entram como chaves simples)
   "190_458": {
     httpStatusCode: 401,
     title: "App Não Instalado",
@@ -506,6 +530,569 @@ const errorMap: Record<string, MappedError> = {
     solution:
       "Garanta que o usuário tenha a role correta na Página e reautentique.",
     isTransient: false,
+  },
+
+  // ============================================
+  // Marketing API Errors
+  // Ref: https://developers.facebook.com/docs/marketing-api/error-reference
+  // ============================================
+
+  // Erro desconhecido com subcode
+  "1_99": {
+    httpStatusCode: 400,
+    title: "Erro Desconhecido",
+    message:
+      "Ocorreu um erro desconhecido. Pode ocorrer se você definir 'level' como 'adset' quando o valor correto deveria ser 'campaign'.",
+    solution:
+      "Verifique se o parâmetro 'level' está correto (campaign, adset, ad).",
+    isTransient: false,
+  },
+
+  // Erros de parâmetro inválido (100)
+  "100": {
+    httpStatusCode: 400,
+    title: "Parâmetro Inválido",
+    message: "Um ou mais parâmetros fornecidos são inválidos.",
+    solution:
+      "Verifique os parâmetros da requisição e corrija os valores inválidos.",
+    isTransient: false,
+  },
+  "100_33": {
+    httpStatusCode: 400,
+    title: "Requisição POST Não Suportada",
+    message:
+      "O token de acesso não foi adicionado como usuário de sistema com permissões apropriadas na conta de anúncios.",
+    solution:
+      "Verifique a conta de anúncios no Business Manager e adicione o usuário de sistema como Admin na conta de anúncios.",
+    isTransient: false,
+  },
+  "100_1487694": {
+    httpStatusCode: 400,
+    title: "Categoria de Segmentação Indisponível",
+    message:
+      "A categoria de segmentação selecionada não está mais disponível. Várias categorias baseadas em comportamento foram descontinuadas.",
+    solution:
+      "Use a API de Targeting Search para ver as categorias disponíveis para segmentação.",
+    isTransient: false,
+  },
+  "100_1752129": {
+    httpStatusCode: 400,
+    title: "Combinação de Tarefas Não Suportada",
+    message:
+      "Esta combinação de tarefas não é suportada para atribuir um usuário a esta conta de anúncios.",
+    solution:
+      "Passe uma combinação de tarefas válida conforme definido no mapeamento de permissões do Business Manager.",
+    isTransient: false,
+  },
+  "100_3858258": {
+    httpStatusCode: 400,
+    title: "Imagem Não Baixada",
+    message:
+      "A imagem não pôde ser baixada. Certifique-se de que a imagem está acessível via internet e não está bloqueada por robots.txt.",
+    solution:
+      "Verifique se a URL da imagem está acessível publicamente e adicione uma regra no robots.txt para permitir o crawler da Meta.",
+    isTransient: false,
+  },
+  "3018": {
+    httpStatusCode: 400,
+    title: "Data de Início Inválida",
+    message:
+      "A data de início do intervalo de tempo não pode estar além de 37 meses da data atual.",
+    solution:
+      "Ajuste a data de início para estar dentro de 37 meses a partir da data atual.",
+    isTransient: false,
+  },
+  "2635": {
+    httpStatusCode: 400,
+    title: "Versão da API de Anúncios Descontinuada",
+    message:
+      "Você está chamando uma versão descontinuada da API de Anúncios. Atualize para a versão mais recente.",
+    solution:
+      "Atualize sua integração para usar a versão mais recente da API de Anúncios. Consulte a documentação para migração.",
+    isTransient: false,
+  },
+  "80004": {
+    httpStatusCode: 429,
+    title: "Muitas Chamadas à Conta de Anúncios",
+    message:
+      "Houve muitas chamadas para esta conta de anúncios. Aguarde um pouco e tente novamente.",
+    solution:
+      "Aguarde antes de tentar novamente. Para mais informações, consulte https://developers.facebook.com/docs/graph-api/overview/rate-limiting#ads-management.",
+    isTransient: true,
+  },
+
+  // Assinatura incorreta
+  "104": {
+    httpStatusCode: 401,
+    title: "Assinatura Incorreta",
+    message: "A assinatura da requisição está incorreta.",
+    solution:
+      "Verifique se a assinatura da requisição está sendo gerada corretamente.",
+    isTransient: false,
+  },
+
+  // Erros de permissão (200)
+  "200": {
+    httpStatusCode: 403,
+    title: "Erro de Permissão",
+    message: "O usuário não tem permissão para realizar esta ação.",
+    solution:
+      "Verifique se o usuário tem as permissões necessárias para esta operação.",
+    isTransient: false,
+  },
+  "200_1870034": {
+    httpStatusCode: 403,
+    title: "Termos de Audiência Personalizada",
+    message:
+      "Você precisa aceitar os termos de Audiência Personalizada antes de criar ou editar uma audiência ou conjunto de anúncios.",
+    solution:
+      "Acesse https://www.facebook.com/ads/manage/customaudiences/tos e aceite os termos.",
+    isTransient: false,
+  },
+  "200_1870047": {
+    httpStatusCode: 400,
+    title: "Tamanho da Audiência Muito Baixo",
+    message:
+      "Você não pode remover usuários desta audiência porque resultará em um tamanho de audiência baixo, podendo causar sub-entrega ou não entrega dos seus anúncios.",
+    solution:
+      "Mantenha um tamanho de audiência adequado para garantir a entrega dos anúncios.",
+    isTransient: false,
+  },
+
+  // Permissão ads_management
+  "294": {
+    httpStatusCode: 403,
+    title: "Permissão ads_management Necessária",
+    message:
+      "Gerenciar anúncios requer a permissão estendida ads_management e um aplicativo na lista de permissões para acessar a Marketing API.",
+    solution:
+      "Solicite a permissão ads_management e verifique se seu app tem acesso à Marketing API.",
+    isTransient: false,
+  },
+
+  // Erros de anúncios
+  "2606": {
+    httpStatusCode: 400,
+    title: "Prévia Indisponível",
+    message: "Não foi possível exibir uma prévia deste anúncio.",
+    solution: "Verifique os dados do criativo do anúncio e tente novamente.",
+    isTransient: false,
+  },
+  "2607": {
+    httpStatusCode: 400,
+    title: "Moeda Inválida",
+    message: "A moeda fornecida é inválida para uso com anúncios.",
+    solution: "Use uma moeda válida suportada pela conta de anúncios.",
+    isTransient: false,
+  },
+  "2615": {
+    httpStatusCode: 400,
+    title: "Atualização de Conta Inválida",
+    message: "Chamada inválida para atualizar esta conta de anúncios.",
+    solution:
+      "Verifique os parâmetros da requisição de atualização da conta de anúncios.",
+    isTransient: false,
+  },
+
+  // Erros de audiência personalizada
+  "2654": {
+    httpStatusCode: 400,
+    title: "Falha ao Criar Audiência",
+    message: "Falha ao criar a audiência personalizada.",
+    solution:
+      "Verifique os parâmetros e tente novamente. Certifique-se de que a conta de anúncios está ativa.",
+    isTransient: false,
+  },
+  "2654_1713092": {
+    httpStatusCode: 403,
+    title: "Sem Permissão de Escrita",
+    message:
+      "Sem permissão de escrita para esta conta de anúncios. O desenvolvedor precisa ter permissões na conta de anúncios para criar uma audiência.",
+    solution: "Solicite permissões de escrita para a conta de anúncios.",
+    isTransient: false,
+  },
+
+  // Erro desconhecido
+  "5000": {
+    httpStatusCode: 500,
+    title: "Código de Erro Desconhecido",
+    message: "Ocorreu um erro desconhecido.",
+    solution: "Tente novamente. Se o problema persistir, contate o suporte.",
+    isTransient: true,
+  },
+
+  // Dynamic Creative
+  "1340029": {
+    httpStatusCode: 400,
+    title: "Exclusão de Anúncio Dinâmico Não Permitida",
+    message:
+      "Atualmente, a exclusão de Anúncio Criativo Dinâmico não é permitida. Exclua o Conjunto de Anúncios pai.",
+    solution:
+      "Para remover este anúncio, exclua o Conjunto de Anúncios (Ad Set) correspondente.",
+    isTransient: false,
+  },
+
+  // Call to Action
+  "1373054": {
+    httpStatusCode: 400,
+    title: "Tipo de Call To Action Inválido",
+    message:
+      "Nenhum tipo de Call To Action foi reconhecido. Consulte a documentação da API de Call To Action.",
+    solution: "Use um tipo de Call To Action válido conforme a documentação.",
+    isTransient: false,
+  },
+
+  // Bloqueios
+  "1404078": {
+    httpStatusCode: 429,
+    title: "Bloqueado Temporariamente",
+    message: "Você foi temporariamente bloqueado de realizar esta ação.",
+    solution:
+      "Aguarde um período antes de tentar novamente. Evite ações repetitivas em curto espaço de tempo.",
+    isTransient: true,
+  },
+  "1404163": {
+    httpStatusCode: 403,
+    title: "Acesso a Anúncios Bloqueado",
+    message:
+      "Você não pode mais usar produtos do Facebook para anunciar. Não é possível criar anúncios, gerenciar ativos de publicidade ou criar novas contas de anúncios ou de negócios.",
+    solution:
+      "Acesse https://www.facebook.com/accountquality/advertising_access para mais informações.",
+    isTransient: false,
+  },
+
+  // Erros de campanha e conjunto de anúncios
+  "1487007": {
+    httpStatusCode: 400,
+    title: "Conjunto de Anúncios Encerrado",
+    message:
+      "Você não pode editar este anúncio porque faz parte de um conjunto de anúncios agendado que atingiu sua data de término.",
+    solution:
+      "Vá à seção Orçamento e Cronograma do conjunto de anúncios e altere a data de término para uma data futura.",
+    isTransient: false,
+  },
+  "1487033": {
+    httpStatusCode: 400,
+    title: "Data de Término da Campanha",
+    message: "A data de término da sua campanha deve estar no futuro.",
+    solution: "Escolha uma data de término futura e tente novamente.",
+    isTransient: false,
+  },
+  "1487056": {
+    httpStatusCode: 400,
+    title: "Conjunto de Anúncios Excluído",
+    message:
+      "Este conjunto de anúncios foi excluído, portanto você só pode editar o nome. Para editar outros campos, duplique o conjunto de anúncios.",
+    solution:
+      "Duplique o conjunto de anúncios para criar um novo com as mesmas configurações que pode ser editado.",
+    isTransient: false,
+  },
+  "1487472": {
+    httpStatusCode: 400,
+    title: "Publicação Não Pode Ser Promovida",
+    message:
+      "Você está usando um conteúdo que não pode ser promovido em um anúncio.",
+    solution: "Escolha uma publicação de Página diferente para continuar.",
+    isTransient: false,
+  },
+  "1487566": {
+    httpStatusCode: 400,
+    title: "Campanha Excluída",
+    message:
+      "Esta campanha foi excluída, portanto você só pode editar o nome. Para editar outros campos, duplique a campanha.",
+    solution:
+      "Duplique a campanha para criar uma nova com as mesmas configurações que pode ser editada.",
+    isTransient: false,
+  },
+  "1487678": {
+    httpStatusCode: 400,
+    title: "Sistema Operacional Incompatível",
+    message:
+      "O aplicativo que você está tentando criar um anúncio está em um sistema operacional diferente das configurações de segmentação deste conjunto de anúncios.",
+    solution:
+      "Alinhe o sistema operacional do aplicativo com a segmentação do conjunto de anúncios.",
+    isTransient: false,
+  },
+
+  // Erros de criativo
+  "1885183": {
+    httpStatusCode: 400,
+    title: "App em Modo de Desenvolvimento",
+    message:
+      "A publicação do criativo do anúncio foi criada por um aplicativo em modo de desenvolvimento. O app deve estar público para criar este anúncio.",
+    solution:
+      "Altere o modo do aplicativo para público antes de criar o anúncio.",
+    isTransient: false,
+  },
+  "1885204": {
+    httpStatusCode: 400,
+    title: "Configuração de Lance",
+    message:
+      "Você precisa definir seu lance como automático para a otimização escolhida.",
+    solution:
+      "Remova qualquer informação de faturamento ou lance, ou altere sua otimização.",
+    isTransient: false,
+  },
+  "1885272": {
+    httpStatusCode: 400,
+    title: "Orçamento Muito Baixo",
+    message: "O orçamento está muito baixo.",
+    solution: "Aumente o orçamento para atender ao mínimo exigido.",
+    isTransient: false,
+  },
+  "1885557": {
+    httpStatusCode: 400,
+    title: "Publicação Indisponível",
+    message:
+      "Seu anúncio está promovendo uma publicação indisponível. Ela pode ter sido excluída, despublicada, não pertence à página do anúncio ou você não tem permissões para vê-la ou promovê-la.",
+    solution:
+      "Verifique se a publicação existe, está publicada e você tem permissões para promovê-la.",
+    isTransient: false,
+  },
+  "1885621": {
+    httpStatusCode: 400,
+    title: "Conflito de Orçamento",
+    message:
+      "Você só pode definir um orçamento no conjunto de anúncios ou na campanha, não em ambos.",
+    solution:
+      "Escolha entre orçamento de campanha (CBO) ou orçamento de conjunto de anúncios.",
+    isTransient: false,
+  },
+  "1885650": {
+    httpStatusCode: 400,
+    title: "Orçamento Abaixo do Mínimo",
+    message:
+      "Seu orçamento está muito baixo. Este valor mínimo é necessário para acomodar qualquer gasto que ocorra enquanto seu orçamento é atualizado, o que pode levar até 15 minutos.",
+    solution: "Aumente o orçamento para atender ao valor mínimo exigido.",
+    isTransient: false,
+  },
+
+  // Erros de Instagram
+  "2238055": {
+    httpStatusCode: 400,
+    title: "Parâmetros Instagram/Orçamento de Campanha",
+    message:
+      "Este erro pode ocorrer por: (1) Você não pode passar instagram_user_id e instagram_actor_id juntos, ou instagram_story_id e source_instagram_media_id juntos no creative spec; (2) O orçamento da sua campanha deve ser pelo menos o mínimo para acomodar todos os conjuntos de anúncios.",
+    solution:
+      "Verifique os parâmetros do Instagram no criativo ou ajuste o orçamento da campanha.",
+    isTransient: false,
+  },
+  "2446149": {
+    httpStatusCode: 400,
+    title: "Conflito de Parâmetros Instagram",
+    message:
+      "Você não pode passar instagram_user_id e instagram_actor_id juntos, ou instagram_story_id e source_instagram_media_id juntos no creative spec.",
+    solution:
+      "Use apenas um dos parâmetros conflitantes: instagram_user_id OU instagram_actor_id, instagram_story_id OU source_instagram_media_id.",
+    isTransient: false,
+  },
+  "2446307": {
+    httpStatusCode: 400,
+    title: "Limite de Gastos da Campanha",
+    message: "O limite de gastos do grupo de campanhas é menor que o mínimo.",
+    solution:
+      "Aumente o limite de gastos da campanha para atender ao mínimo exigido.",
+    isTransient: false,
+  },
+  "2446173": {
+    httpStatusCode: 400,
+    title: "Rótulo de Regra de Segmentação",
+    message:
+      "O rótulo da regra de segmentação não se refere a nenhum dos rótulos de ativos.",
+    solution:
+      "Corrija removendo todos os criativos de anúncios e verifique os rótulos de regra.",
+    isTransient: false,
+  },
+  "2446289": {
+    httpStatusCode: 400,
+    title: "Publicação Não Disponível",
+    message:
+      "A publicação selecionada para seu anúncio não está disponível. Pode ter sido excluída ou você não tem permissões para vê-la.",
+    solution:
+      "Verifique o criativo do anúncio e selecione uma publicação válida.",
+    isTransient: false,
+  },
+  "2446347": {
+    httpStatusCode: 400,
+    title: "Flag use_existing_post Necessária",
+    message:
+      "O anúncio de uma publicação existente deve ter a flag use_existing_post definida como true no asset_feed_spec:target_rules.",
+    solution: "Inclua use_existing_post: true na requisição POST ao servidor.",
+    isTransient: false,
+  },
+  "2446383": {
+    httpStatusCode: 400,
+    title: "URL do Site Necessária",
+    message:
+      "O objetivo da sua campanha requer uma URL de site externo. Selecione um call to action e insira uma URL de site na seção de criativo do anúncio.",
+    solution:
+      "Adicione uma URL de site válida e um call to action ao criativo.",
+    isTransient: false,
+  },
+  "2446394": {
+    httpStatusCode: 400,
+    title: "Opções de Segmentação Indisponíveis",
+    message:
+      "Este conjunto de anúncios inclui opções de segmentação detalhada que não estão mais disponíveis ou não estão disponíveis ao excluir pessoas de uma audiência.",
+    solution:
+      "Remova itens da segmentação detalhada ou confirme as alterações para reativar.",
+    isTransient: false,
+  },
+  "2446509": {
+    httpStatusCode: 400,
+    title: "Tipo de Destino de Campanha Inválido",
+    message: "O tipo de destino da campanha de anúncios não é válido.",
+    solution: "Verifique e corrija o tipo de destino da campanha.",
+    isTransient: false,
+  },
+  "2446580": {
+    httpStatusCode: 400,
+    title: "Conflito de Componentes Interativos",
+    message:
+      "Não é possível especificar tanto 'components' quanto 'child_attachments' ao fornecer parâmetros interactive_components_spec.",
+    solution: "Use apenas 'components' ou 'child_attachments', não ambos.",
+    isTransient: false,
+  },
+  "2446712": {
+    httpStatusCode: 400,
+    title: "Otimização de Visitas à Loja Indisponível",
+    message:
+      "A capacidade de criar ou executar um conjunto de anúncios com otimização de visitas à loja não está mais disponível.",
+    solution: "Escolha a otimização de alcance ou vendas na loja em vez disso.",
+    isTransient: false,
+  },
+  "2446867": {
+    httpStatusCode: 400,
+    title: "Limite de Campanhas Advantage+",
+    message:
+      "Você já atingiu o limite de Campanhas Advantage+ Shopping para determinados países.",
+    solution:
+      "Para criar campanhas adicionais para esses países, use uma campanha de conversões padrão.",
+    isTransient: false,
+  },
+  "2446880": {
+    httpStatusCode: 400,
+    title: "WhatsApp Desconectado",
+    message:
+      "O número do WhatsApp conectado à sua página do Facebook ou perfil do Instagram foi desconectado.",
+    solution:
+      "Reconecte sua conta do WhatsApp para executar este anúncio novamente.",
+    isTransient: false,
+  },
+
+  // Erros de mídia e assets
+  "2490085": {
+    httpStatusCode: 400,
+    title: "Chave de Corte Descontinuada",
+    message:
+      "A chave de corte 191x100 não estará mais disponível na versão mais recente da API de Anúncios. A chave de corte recomendada será 100x100.",
+    solution: "Atualize para usar a chave de corte 100x100.",
+    isTransient: false,
+  },
+  "2490155": {
+    httpStatusCode: 400,
+    title: "Publicação Associada Indisponível",
+    message:
+      "A publicação associada ao seu anúncio não está disponível. Pode ter sido removida ou você não tem permissão para visualizá-la.",
+    solution:
+      "Verifique se a publicação existe e você tem permissões para acessá-la.",
+    isTransient: false,
+  },
+  "2490372": {
+    httpStatusCode: 400,
+    title: "Destino da Loja Necessário",
+    message: "Você precisa escolher um destino de loja para continuar.",
+    solution:
+      "Selecione um destino de loja válido nas configurações do anúncio.",
+    isTransient: false,
+  },
+  "2490427": {
+    httpStatusCode: 400,
+    title: "Anúncio Rejeitado",
+    message:
+      "Seu anúncio foi rejeitado na última revisão e está atualmente desativado.",
+    solution:
+      "Para habilitar o anúncio, você precisará fazer atualizações e criar um novo anúncio.",
+    isTransient: false,
+  },
+  "2490468": {
+    httpStatusCode: 400,
+    title: "Anúncio Rejeitado na Revisão",
+    message:
+      "Seu anúncio foi rejeitado na última revisão e está atualmente desativado.",
+    solution:
+      "Para habilitar o anúncio, você precisará fazer atualizações e criar um novo anúncio.",
+    isTransient: false,
+  },
+
+  // Anúncios políticos
+  "2708008": {
+    httpStatusCode: 403,
+    title: "Autorização para Anúncios Políticos",
+    message:
+      "Você não foi autorizado a veicular anúncios sobre questões sociais, eleições ou política.",
+    solution:
+      "Tenha um usuário autorizado da conta de anúncios publicar este anúncio, ou complete o processo de confirmação de identidade em https://www.facebook.com/id",
+    isTransient: false,
+  },
+
+  // Bloqueio temporário
+  "2859015": {
+    httpStatusCode: 429,
+    title: "Ação Bloqueada Temporariamente",
+    message: "Você foi temporariamente bloqueado de realizar esta ação.",
+    solution: "Aguarde um período antes de tentar novamente.",
+    isTransient: true,
+  },
+
+  // Segmentação de menores
+  "3858064": {
+    httpStatusCode: 400,
+    title: "Segmentação de Menores Restrita",
+    message:
+      "Esta campanha contém opções que não podem mais ser usadas em campanhas com audiências menores de 18 anos globalmente, 20 na Tailândia ou 21 na Indonésia.",
+    solution:
+      "Aumente a idade mínima da sua audiência ou remova todas as opções de segmentação exceto idade e localizações que são cidades ou maiores (excluindo códigos postais).",
+    isTransient: false,
+  },
+
+  // Standard Enhancements
+  "3858082": {
+    httpStatusCode: 400,
+    title: "Enroll Status Não Fornecido",
+    message:
+      "Este criativo é elegível para Melhorias Padrão, mas enroll_status não foi fornecido.",
+    solution: "Escolha se deseja ativar as melhorias padrão ou não.",
+    isTransient: false,
+  },
+
+  // Informações de beneficiário
+  "3858152": {
+    httpStatusCode: 400,
+    title: "Informações de Beneficiário/Pagador Necessárias",
+    message:
+      "Este anúncio pertence a um conjunto de anúncios que deve ser publicado com informações de beneficiário e pagador.",
+    solution:
+      "Vá ao conjunto de anúncios para adicionar ou revisar estas informações e clique em 'Publicar'.",
+    isTransient: false,
+  },
+
+  // Partnership ads
+  "3867105": {
+    httpStatusCode: 400,
+    title: "Conteúdo de Anúncio de Parceria Inválido",
+    message: "Este conteúdo não pode ser usado para seu anúncio de parceria.",
+    solution: "Selecione um conteúdo diferente.",
+    isTransient: false,
+  },
+
+  // Erro de conta
+  "3910001": {
+    httpStatusCode: 500,
+    title: "Problema com a Conta",
+    message: "Estamos enfrentando alguns problemas com sua conta.",
+    solution: "Tente novamente mais tarde.",
+    isTransient: true,
   },
 };
 
