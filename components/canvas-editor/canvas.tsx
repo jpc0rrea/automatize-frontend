@@ -24,16 +24,7 @@ type CanvasProps = {
   tool: "select" | "text" | "shape" | "pan";
 };
 
-type ResizeHandle =
-  | "nw"
-  | "n"
-  | "ne"
-  | "e"
-  | "se"
-  | "s"
-  | "sw"
-  | "w"
-  | null;
+type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | null;
 
 const HANDLE_SIZE = 8;
 const SELECTION_PADDING = 4;
@@ -186,8 +177,7 @@ export function Canvas({
         }
 
         case "shape": {
-          const { shape, fill, stroke, strokeWidth, borderRadius } =
-            layer.data;
+          const { shape, fill, stroke, strokeWidth, borderRadius } = layer.data;
 
           ctx.fillStyle = fill;
           ctx.strokeStyle = stroke;
@@ -591,7 +581,7 @@ export function Canvas({
   const getCursor = () => {
     if (tool === "pan") return "grab";
     if (activeHandle) {
-      const cursors: Record<ResizeHandle, string> = {
+      const cursors: Record<NonNullable<ResizeHandle>, string> = {
         nw: "nwse-resize",
         n: "ns-resize",
         ne: "nesw-resize",
@@ -600,7 +590,6 @@ export function Canvas({
         s: "ns-resize",
         sw: "nesw-resize",
         w: "ew-resize",
-        null: "default",
       };
       return cursors[activeHandle];
     }
@@ -637,4 +626,3 @@ export function Canvas({
     </div>
   );
 }
-
