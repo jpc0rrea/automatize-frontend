@@ -37,7 +37,12 @@ export function ImagePreview({
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Document[]
-  >(result?.id && result?.status !== "failed" ? `/api/document?id=${result.id}` : null, fetcher);
+  >(
+    result?.id && result?.status !== "failed"
+      ? `/api/document?id=${result.id}`
+      : null,
+    fetcher
+  );
 
   const previewDocument = useMemo(() => documents?.[0], [documents]);
   const hitboxRef = useRef<HTMLDivElement>(null);
@@ -60,12 +65,7 @@ export function ImagePreview({
 
   // Show compact result button when artifact is visible
   if (artifact.isVisible && result) {
-    return (
-      <ImageToolResult
-        isReadonly={isReadonly}
-        result={result}
-      />
-    );
+    return <ImageToolResult isReadonly={isReadonly} result={result} />;
   }
 
   // Show generating state
@@ -100,10 +100,7 @@ export function ImagePreview({
         result={result}
         setArtifact={setArtifact}
       />
-      <ImageHeader
-        isStreaming={false}
-        title={document.title}
-      />
+      <ImageHeader isStreaming={false} title={document.title} />
       <ImageContent document={document} />
     </div>
   );
@@ -162,10 +159,7 @@ type ImageToolResultProps = {
   isReadonly: boolean;
 };
 
-function PureImageToolResult({
-  result,
-  isReadonly,
-}: ImageToolResultProps) {
+function PureImageToolResult({ result, isReadonly }: ImageToolResultProps) {
   const { setArtifact } = useArtifact();
 
   return (
@@ -200,9 +194,7 @@ function PureImageToolResult({
       <div className="text-muted-foreground">
         <ImageIcon />
       </div>
-      <div className="text-left">
-        Imagem gerada: "{result.title}"
-      </div>
+      <div className="text-left">Imagem gerada: "{result.title}"</div>
     </button>
   );
 }
@@ -229,7 +221,7 @@ const PureImageHitboxLayer = ({
       if (!result) {
         return;
       }
-      
+
       const boundingBox = event.currentTarget.getBoundingClientRect();
 
       setArtifact((artifact) =>
@@ -329,7 +321,3 @@ const ImageContent = ({ document }: { document: Document }) => {
     </div>
   );
 };
-
-
-
-
