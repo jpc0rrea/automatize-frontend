@@ -49,10 +49,7 @@ async function deleteUser(emailOrId: string) {
   console.log(`\n🔍 Looking for user: ${emailOrId}`);
 
   // Find the user by email or ID
-  const users = await db
-    .select()
-    .from(user)
-    .where(eq(user.email, emailOrId));
+  const users = await db.select().from(user).where(eq(user.email, emailOrId));
 
   let targetUser = users[0];
 
@@ -139,7 +136,9 @@ async function deleteUser(emailOrId: string) {
     .where(eq(suggestion.userId, userId))
     .returning();
   if (userSuggestionsDeleted.length > 0) {
-    console.log(`   🗑️  Deleted ${userSuggestionsDeleted.length} user-created suggestions`);
+    console.log(
+      `   🗑️  Deleted ${userSuggestionsDeleted.length} user-created suggestions`
+    );
   }
 
   // Delete documents
@@ -166,7 +165,9 @@ async function deleteUser(emailOrId: string) {
     .delete(userCompany)
     .where(eq(userCompany.userId, userId))
     .returning();
-  console.log(`   🗑️  Deleted ${userCompanyDeleted.length} user-company relationships`);
+  console.log(
+    `   🗑️  Deleted ${userCompanyDeleted.length} user-company relationships`
+  );
 
   // For each company, check if there are other users
   let companiesDeleted = 0;
@@ -243,4 +244,3 @@ deleteUser(emailOrId)
     console.error("❌ Error deleting user:", error);
     process.exit(1);
   });
-
