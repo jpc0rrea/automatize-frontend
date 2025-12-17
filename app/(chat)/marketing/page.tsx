@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, LogIn, TrendingUp } from "lucide-react";
 import { AccountSelector } from "./components/account-selector";
 import { CampaignsTable } from "./components/campaigns-table";
 import { CampaignDetail } from "./components/campaign-detail";
 import type { Campaign } from "@/lib/meta-business/marketing/types";
+import { Button } from "@/components/ui/button";
 
 type AdAccount = {
   id: string;
@@ -22,16 +23,49 @@ type GetMeResponse = {
   pictureUrl?: string;
 };
 
+const META_MARKETING_SCOPES = [
+  "read_insights",
+  "ads_management",
+  "ads_read",
+  "business_management",
+  "public_profile",
+].join(",");
+
 export default function MarketingPage() {
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    null
+  );
   const [userPicture, setUserPicture] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
 
   // Campaign detail state
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
+    null
+  );
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
+
+  function buildMetaMarketingAuthUrl(): string {
+    const clientId = process.env.NEXT_PUBLIC_META_GENERAL_APP_ID;
+    const redirectUri = process.env.NEXT_PUBLIC_META_MARKETING_REDIRECT_URI;
+
+    if (!clientId || !redirectUri) {
+      // eslint-disable-next-line no-console
+      console.error("Missing Instagram OAuth configuration");
+      return "#";
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      // response_type: "code",
+      scope: META_MARKETING_SCOPES,
+      // force_reauth: "true",
+    });
+
+    return `https://www.facebook.com/v24.0/dialog/oauth?${params.toString()}`;
+  }
 
   // Fetch ad accounts on mount
   useEffect(() => {
@@ -76,8 +110,19 @@ export default function MarketingPage() {
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <TrendingUp className="size-5 text-primary" />
-          <h1 className="font-semibold text-lg hidden sm:block">Marketing Dashboard</h1>
+          <h1 className="font-semibold text-lg hidden sm:block">
+            Marketing Dashboard
+          </h1>
           <h1 className="font-semibold text-lg sm:hidden">Marketing</h1>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              window.location.href = buildMetaMarketingAuthUrl();
+            }}
+          >
+            <LogIn className="size-4" />
+          </Button>
         </div>
         {!isLoadingAccounts && accounts.length > 0 && (
           <AccountSelector
@@ -134,4 +179,3 @@ export default function MarketingPage() {
     </div>
   );
 }
-
