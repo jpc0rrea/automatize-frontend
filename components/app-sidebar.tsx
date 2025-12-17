@@ -1,13 +1,14 @@
 "use client";
 
+import { ImageIcon, LayoutGrid, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon } from "@/components/icons";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
@@ -18,8 +19,13 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -33,9 +39,11 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -57,6 +65,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     });
   };
 
+  const isPostsSection = pathname?.startsWith("/posts");
+  const isChatSection = pathname === "/" || pathname?.startsWith("/chat");
+
   return (
     <>
       <Sidebar className="group-data-[side=left]:border-r-0">
@@ -65,7 +76,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             <div className="flex flex-row items-center justify-between">
               <Link
                 className="flex flex-row items-center rounded-md hover:bg-muted transition-colors p-2"
-                href="/"
+                href="/posts"
                 onClick={() => {
                   setOpenMobile(false);
                 }}
@@ -112,6 +123,44 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          {/* Navigation Section */}
+          <SidebarGroup>
+            <SidebarGroupLabel>Navegação</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(isPostsSection && "bg-primary/10 text-primary")}
+                  >
+                    <Link
+                      href="/posts"
+                      onClick={() => setOpenMobile(false)}
+                    >
+                      <LayoutGrid className="size-4" />
+                      <span>Meus Posts</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(isChatSection && "bg-primary/10 text-primary")}
+                  >
+                    <Link
+                      href="/"
+                      onClick={() => setOpenMobile(false)}
+                    >
+                      <MessageSquare className="size-4" />
+                      <span>Chat AI</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Chat History */}
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>

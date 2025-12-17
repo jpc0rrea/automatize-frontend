@@ -13,6 +13,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import type { Layer, PostStatus } from "../types";
 import type { AppUsage } from "../usage";
 
 export const user = pgTable("users", {
@@ -265,3 +266,48 @@ export const scheduledPost = pgTable(
 );
 
 export type ScheduledPost = InferSelectModel<typeof scheduledPost>;
+
+// Post table for canvas-based content creation
+export const post = pgTable("posts", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => user.id),
+
+  // Canvas dimensions
+  width: integer("width").notNull().default(1080),
+  height: integer("height").notNull().default(1080),
+
+  // Layers stored as JSONB (flexible & simple)
+  layers: jsonb("layers").$type<Layer[]>().notNull().default([]),
+
+  // Final rendered image (base64 or URL for storage/CDN)
+  renderedImage: text("rendered_image"),
+  thumbnailImage: text("thumbnail_image"),
+
+  // Post metadata
+  title: varchar("title", { length: 255 }),
+  caption: text("caption"),
+  status: varchar("status", {
+    enum: ["draft", "ready", "scheduled", "posted", "failed"],
+  })
+    .$type<PostStatus>()
+    .notNull()
+    .default("draft"),
+
+  // Scheduling
+  scheduledAt: timestamp("scheduled_at"),
+  publishedAt: timestamp("published_at"),
+
+  // Reference to scheduled post (if scheduled)
+  scheduledPostId: uuid("scheduled_post_id").references(() => scheduledPost.id),
+
+  // Related chat (for AI conversation context)
+  chatId: uuid("chat_id").references(() => chat.id),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export type Post = InferSelectModel<typeof post>;

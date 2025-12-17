@@ -1,0 +1,6 @@
+{
+  "setup-worktree": [
+    "bun install",
+    "git --work-tree=\"$(git rev-parse --show-toplevel)/..\" --git-dir=\"$(git rev-parse --git-dir)/../main/.git\" show main:.env > .env.worktree"
+  ]
+}

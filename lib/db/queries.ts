@@ -18,6 +18,7 @@ import postgres from "postgres";
 import type { ArtifactKind } from "@/components/artifact";
 import { ChatSDKError } from "../errors";
 import type { AppUsage } from "../usage";
+import type { Layer, PostStatus } from "../types";
 import {
   type Chat,
   chat,
@@ -30,6 +31,8 @@ import {
   type InstagramAccount,
   instagramAccount,
   message,
+  type Post,
+  post,
   type ScheduledPost,
   scheduledPost,
   type Suggestion,
@@ -921,6 +924,37 @@ export async function deleteCompanyReferenceImage({
   }
 }
 
+export async function getUserReferenceImages({
+  userId,
+}: {
+  userId: string;
+}): Promise<CompanyReferenceImage[]> {
+  try {
+    // Get all companies the user belongs to and their reference images
+    const images = await db
+      .select({
+        id: companyReferenceImage.id,
+        companyId: companyReferenceImage.companyId,
+        url: companyReferenceImage.url,
+        thumbnailUrl: companyReferenceImage.thumbnailUrl,
+        source: companyReferenceImage.source,
+        caption: companyReferenceImage.caption,
+        createdAt: companyReferenceImage.createdAt,
+      })
+      .from(companyReferenceImage)
+      .innerJoin(userCompany, eq(companyReferenceImage.companyId, userCompany.companyId))
+      .where(eq(userCompany.userId, userId))
+      .orderBy(desc(companyReferenceImage.createdAt));
+
+    return images;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user reference images"
+    );
+  }
+}
+
 export async function hasUserCompletedOnboarding({
   userId,
 }: {
@@ -1168,5 +1202,260 @@ export async function getInstagramAccountByUserId({
       "bad_request:database",
       "Failed to get Instagram account by user id"
     );
+  }
+}
+
+// =============================================
+// Post (Canvas Editor) Queries
+// =============================================
+
+export async function createPost({
+  userId,
+  title,
+  width = 1080,
+  height = 1080,
+  layers = [],
+  caption,
+  chatId,
+}: {
+  userId: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  layers?: Layer[];
+  caption?: string;
+  chatId?: string;
+}): Promise<Post> {
+  try {
+    const [newPost] = await db
+      .insert(post)
+      .values({
+        userId,
+        title: title ?? "Untitled Post",
+        width,
+        height,
+        layers,
+        caption,
+        chatId,
+        status: "draft",
+      })
+      .returning();
+
+    if (!newPost) {
+      throw new ChatSDKError("bad_request:database", "Failed to create post");
+    }
+
+    return newPost;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError("bad_request:database", "Failed to create post");
+  }
+}
+
+export async function getPostById({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}): Promise<Post | null> {
+  try {
+    const [foundPost] = await db
+      .select()
+      .from(post)
+      .where(
+        and(eq(post.id, id), eq(post.userId, userId), isNull(post.deletedAt))
+      )
+      .limit(1);
+
+    return foundPost ?? null;
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to get post");
+  }
+}
+
+export async function getPostsByUserId({
+  userId,
+  status,
+  limit = 20,
+  offset = 0,
+}: {
+  userId: string;
+  status?: PostStatus;
+  limit?: number;
+  offset?: number;
+}): Promise<{ posts: Post[]; total: number }> {
+  try {
+    const whereConditions = [eq(post.userId, userId), isNull(post.deletedAt)];
+
+    if (status) {
+      whereConditions.push(eq(post.status, status));
+    }
+
+    const whereClause = and(...whereConditions);
+
+    const [posts, [countResult]] = await Promise.all([
+      db
+        .select()
+        .from(post)
+        .where(whereClause)
+        .orderBy(desc(post.updatedAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ count: count() }).from(post).where(whereClause),
+    ]);
+
+    return {
+      posts,
+      total: countResult?.count ?? 0,
+    };
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to get posts");
+  }
+}
+
+export async function updatePost({
+  id,
+  userId,
+  title,
+  width,
+  height,
+  layers,
+  renderedImage,
+  thumbnailImage,
+  caption,
+  status,
+  scheduledAt,
+  publishedAt,
+  scheduledPostId,
+}: {
+  id: string;
+  userId: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  layers?: Layer[];
+  renderedImage?: string;
+  thumbnailImage?: string;
+  caption?: string;
+  status?: PostStatus;
+  scheduledAt?: Date | null;
+  publishedAt?: Date | null;
+  scheduledPostId?: string | null;
+}): Promise<Post> {
+  try {
+    const updateData: Partial<Post> & { updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+
+    if (title !== undefined) updateData.title = title;
+    if (width !== undefined) updateData.width = width;
+    if (height !== undefined) updateData.height = height;
+    if (layers !== undefined) updateData.layers = layers;
+    if (renderedImage !== undefined) updateData.renderedImage = renderedImage;
+    if (thumbnailImage !== undefined)
+      updateData.thumbnailImage = thumbnailImage;
+    if (caption !== undefined) updateData.caption = caption;
+    if (status !== undefined) updateData.status = status;
+    if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt;
+    if (publishedAt !== undefined) updateData.publishedAt = publishedAt;
+    if (scheduledPostId !== undefined)
+      updateData.scheduledPostId = scheduledPostId;
+
+    const [updatedPost] = await db
+      .update(post)
+      .set(updateData)
+      .where(
+        and(eq(post.id, id), eq(post.userId, userId), isNull(post.deletedAt))
+      )
+      .returning();
+
+    if (!updatedPost) {
+      throw new ChatSDKError("not_found:database", "Post not found");
+    }
+
+    return updatedPost;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError("bad_request:database", "Failed to update post");
+  }
+}
+
+export async function updatePostLayers({
+  id,
+  userId,
+  layers,
+}: {
+  id: string;
+  userId: string;
+  layers: Layer[];
+}): Promise<Post> {
+  return updatePost({ id, userId, layers });
+}
+
+export async function deletePost({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}): Promise<void> {
+  try {
+    // Soft delete by setting deletedAt
+    await db
+      .update(post)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(eq(post.id, id), eq(post.userId, userId), isNull(post.deletedAt))
+      );
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to delete post");
+  }
+}
+
+export async function duplicatePost({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}): Promise<Post> {
+  try {
+    const originalPost = await getPostById({ id, userId });
+
+    if (!originalPost) {
+      throw new ChatSDKError("not_found:database", "Post not found");
+    }
+
+    const [duplicatedPost] = await db
+      .insert(post)
+      .values({
+        userId,
+        title: `${originalPost.title ?? "Untitled"} (copy)`,
+        width: originalPost.width,
+        height: originalPost.height,
+        layers: originalPost.layers,
+        caption: originalPost.caption,
+        status: "draft",
+      })
+      .returning();
+
+    if (!duplicatedPost) {
+      throw new ChatSDKError(
+        "bad_request:database",
+        "Failed to duplicate post"
+      );
+    }
+
+    return duplicatedPost;
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError("bad_request:database", "Failed to duplicate post");
   }
 }
