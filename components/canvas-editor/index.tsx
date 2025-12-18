@@ -31,7 +31,7 @@ type CanvasEditorProps = {
 };
 
 export function CanvasEditor({ postId }: CanvasEditorProps) {
-  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
 
@@ -398,7 +398,7 @@ export function CanvasEditor({ postId }: CanvasEditorProps) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">Post não encontrado</p>
-        <Link href="/posts">
+        <Link href="/">
           <Button variant="outline">
             <ArrowLeft className="mr-2 size-4" />
             Voltar para posts
@@ -414,7 +414,7 @@ export function CanvasEditor({ postId }: CanvasEditorProps) {
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
         <div className="flex items-center gap-3">
           <SidebarToggle />
-          <Link href="/posts">
+          <Link href="/">
             <Button size="icon" variant="ghost">
               <ArrowLeft className="size-5" />
             </Button>

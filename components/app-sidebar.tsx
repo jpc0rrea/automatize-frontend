@@ -1,20 +1,10 @@
 "use client";
 
-import { ImageIcon, LayoutGrid, MessageSquare } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useSWRConfig } from "swr";
-import { unstable_serialize } from "swr/infinite";
-import { PlusIcon } from "@/components/icons";
-import {
-  getChatHistoryPaginationKey,
-  SidebarHistory,
-} from "@/components/sidebar-history";
 import { SidebarUserNav } from "@/components/sidebar-user-nav";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -28,164 +18,72 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  const { mutate } = useSWRConfig();
-  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
-  const handleDeleteAll = () => {
-    const deletePromise = fetch("/api/history", {
-      method: "DELETE",
-    });
-
-    toast.promise(deletePromise, {
-      loading: "Deletando todos os chats...",
-      success: () => {
-        mutate(unstable_serialize(getChatHistoryPaginationKey));
-        router.push("/");
-        setShowDeleteAllDialog(false);
-        return "Todos os chats deletados com sucesso";
-      },
-      error: "Falha ao deletar os chats",
-    });
-  };
-
-  const isPostsSection = pathname?.startsWith("/posts");
-  const isChatSection = pathname === "/" || pathname?.startsWith("/chat");
+  const isPostsSection = pathname === "/" || pathname?.startsWith("/posts");
 
   return (
-    <>
-      <Sidebar className="group-data-[side=left]:border-r-0">
-        <SidebarHeader>
-          <SidebarMenu>
-            <div className="flex flex-row items-center justify-between">
-              <Link
-                className="flex flex-row items-center rounded-md hover:bg-muted transition-colors p-2"
-                href="/posts"
-                onClick={() => {
-                  setOpenMobile(false);
-                }}
-              >
-                {/* Logo for light mode */}
-                {/* biome-ignore lint/a11y/useAltText: Alt text provided */}
-                <img
-                  alt="AutomatizeJá"
-                  className="block dark:hidden"
-                  src="/logo/3.png"
-                  style={{ height: 28, width: "auto" }}
-                />
-                {/* Logo for dark mode */}
-                {/* biome-ignore lint/a11y/useAltText: Alt text provided */}
-                <img
-                  alt="AutomatizeJá"
-                  className="hidden dark:block"
-                  src="/logo/9.png"
-                  style={{ height: 28, width: "auto" }}
-                />
-              </Link>
-              <div className="flex flex-row gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 p-1 md:h-fit md:p-2"
-                      onClick={() => {
-                        setOpenMobile(false);
-                        router.push("/");
-                        router.refresh();
-                      }}
-                      type="button"
-                      variant="ghost"
-                    >
-                      <PlusIcon />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent align="end" className="hidden md:block">
-                    Novo chat
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          {/* Navigation Section */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Navegação</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    className={cn(isPostsSection && "bg-primary/10 text-primary")}
+    <Sidebar className="group-data-[side=left]:border-r-0">
+      <SidebarHeader>
+        <SidebarMenu>
+          <div className="flex flex-row items-center justify-between">
+            <Link
+              className="flex flex-row items-center rounded-md hover:bg-muted transition-colors p-2"
+              href="/"
+              onClick={() => {
+                setOpenMobile(false);
+              }}
+            >
+              {/* Logo for light mode */}
+              {/* biome-ignore lint/a11y/useAltText: Alt text provided */}
+              <img
+                alt="AutomatizeJá"
+                className="block dark:hidden"
+                src="/logo/3.png"
+                style={{ height: 28, width: "auto" }}
+              />
+              {/* Logo for dark mode */}
+              {/* biome-ignore lint/a11y/useAltText: Alt text provided */}
+              <img
+                alt="AutomatizeJá"
+                className="hidden dark:block"
+                src="/logo/9.png"
+                style={{ height: 28, width: "auto" }}
+              />
+            </Link>
+          </div>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        {/* Navigation Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Navegação</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={cn(isPostsSection && "bg-primary/10 text-primary")}
+                >
+                  <Link
+                    href="/"
+                    onClick={() => setOpenMobile(false)}
                   >
-                    <Link
-                      href="/posts"
-                      onClick={() => setOpenMobile(false)}
-                    >
-                      <LayoutGrid className="size-4" />
-                      <span>Meus Posts</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    className={cn(isChatSection && "bg-primary/10 text-primary")}
-                  >
-                    <Link
-                      href="/"
-                      onClick={() => setOpenMobile(false)}
-                    >
-                      <MessageSquare className="size-4" />
-                      <span>Chat AI</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          {/* Chat History */}
-          <SidebarHistory user={user} />
-        </SidebarContent>
-        <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
-      </Sidebar>
-
-      <AlertDialog
-        onOpenChange={setShowDeleteAllDialog}
-        open={showDeleteAllDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deletar todos os chats?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente
-              todos os seus chats e os removerá dos nossos servidores.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>
-              Deletar Todos
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+                    <LayoutGrid className="size-4" />
+                    <span>Meus Posts</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+    </Sidebar>
   );
 }

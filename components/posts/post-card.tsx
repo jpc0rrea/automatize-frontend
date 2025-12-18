@@ -136,10 +136,13 @@ export function PostCard({ post, onDelete, onDuplicate }: PostCardProps) {
                   alt={post.title ?? "Post thumbnail"}
                   className="size-full object-cover transition-transform group-hover:scale-105"
                   src={
-                    post.thumbnailImage ??
-                    (post.renderedImage?.startsWith("data:")
-                      ? post.renderedImage
-                      : `data:image/png;base64,${post.renderedImage}`)
+                    post.thumbnailImage
+                      ? post.thumbnailImage.startsWith("data:")
+                        ? post.thumbnailImage
+                        : `data:image/png;base64,${post.thumbnailImage}`
+                      : post.renderedImage?.startsWith("data:")
+                        ? post.renderedImage
+                        : `data:image/png;base64,${post.renderedImage}`
                   }
                 />
               ) : post.layers.length > 0 ? (

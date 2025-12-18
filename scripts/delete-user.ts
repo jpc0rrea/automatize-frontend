@@ -204,19 +204,19 @@ async function deleteUser(emailOrId: string) {
     .returning();
   console.log(`   🗑️  Deleted ${instagramDeleted.length} Instagram accounts`);
 
-  // 5. Delete scheduled posts
-  const scheduledPostsDeleted = await db
-    .delete(scheduledPost)
-    .where(eq(scheduledPost.userId, userId))
-    .returning();
-  console.log(`   🗑️  Deleted ${scheduledPostsDeleted.length} scheduled posts`);
-
-  // 6. Delete canvas posts
+  // 5. Delete canvas posts (must be before scheduled posts due to scheduledPostId FK)
   const postsDeleted = await db
     .delete(post)
     .where(eq(post.userId, userId))
     .returning();
   console.log(`   🗑️  Deleted ${postsDeleted.length} canvas posts`);
+
+  // 6. Delete scheduled posts
+  const scheduledPostsDeleted = await db
+    .delete(scheduledPost)
+    .where(eq(scheduledPost.userId, userId))
+    .returning();
+  console.log(`   🗑️  Deleted ${scheduledPostsDeleted.length} scheduled posts`);
 
   // 7. Finally, delete the user
   const userDeleted = await db
