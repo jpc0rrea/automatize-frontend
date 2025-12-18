@@ -224,14 +224,67 @@ export const instagramAccount = pgTable(
     deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
-    uniqueUserAccount: unique("instagram_accounts_user_id_account_id_unique").on(
-      table.userId,
-      table.accountId
-    ),
+    uniqueUserAccount: unique(
+      "instagram_accounts_user_id_account_id_unique"
+    ).on(table.userId, table.accountId),
   })
 );
 
 export type InstagramAccount = InferSelectModel<typeof instagramAccount>;
+
+// Meta Business Account table for storing Facebook user connections (for Marketing API)
+export const metaBusinessAccount = pgTable(
+  "meta_business_accounts",
+  {
+    id: text("id").primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id),
+    facebookUserId: text("facebook_user_id").notNull(),
+    name: text("name"),
+    pictureUrl: text("picture_url"),
+    accessToken: text("access_token").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => ({
+    uniqueUserFacebookAccount: unique(
+      "meta_business_accounts_user_id_facebook_user_id_unique"
+    ).on(table.userId, table.facebookUserId),
+  })
+);
+
+export type MetaBusinessAccount = InferSelectModel<typeof metaBusinessAccount>;
+
+// Meta Ad Account table for storing linked ad accounts
+export const metaAdAccount = pgTable(
+  "meta_ad_accounts",
+  {
+    id: text("id").primaryKey().notNull(),
+    metaBusinessAccountId: text("meta_business_account_id")
+      .notNull()
+      .references(() => metaBusinessAccount.id),
+    adAccountId: text("ad_account_id").notNull(), // Full ID with "act_" prefix
+    accountId: text("account_id").notNull(), // Account ID without "act_" prefix
+    name: text("name"),
+    currency: text("currency"),
+    timezoneId: text("timezone_id"),
+    timezoneName: text("timezone_name"),
+    accountStatus: integer("account_status"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => ({
+    uniqueMetaBusinessAdAccount: unique(
+      "meta_ad_accounts_meta_business_account_id_ad_account_id_unique"
+    ).on(table.metaBusinessAccountId, table.adAccountId),
+  })
+);
+
+export type MetaAdAccount = InferSelectModel<typeof metaAdAccount>;
 
 // Scheduled posts for Instagram publishing
 export const scheduledPost = pgTable(
@@ -259,9 +312,9 @@ export const scheduledPost = pgTable(
     deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
-    uniqueMediaContainerId: unique("scheduled_posts_media_container_id_unique").on(
-      table.mediaContainerId
-    ),
+    uniqueMediaContainerId: unique(
+      "scheduled_posts_media_container_id_unique"
+    ).on(table.mediaContainerId),
   })
 );
 
