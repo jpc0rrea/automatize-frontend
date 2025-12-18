@@ -4,14 +4,16 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
 config({
-  path: ".env.local",
+  path: ".env",
 });
 
 const runMigrate = async () => {
   if (!process.env.POSTGRES_URL) {
     // throw new Error("POSTGRES_URL is not defined");
     console.log("⚠️ POSTGRES_URL is not defined, skipping migrations");
-    console.log("   Run 'bun run db:migrate' manually when database is available");
+    console.log(
+      "   Run 'bun run db:migrate' manually when database is available"
+    );
     process.exit(0);
   }
 
