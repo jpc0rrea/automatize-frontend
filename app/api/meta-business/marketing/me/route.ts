@@ -1,42 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { metaApiCall } from "@/lib/meta-business/api";
-import { errorToGraphErrorReturn } from "@/lib/meta-business/error";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { and, eq, isNull } from "drizzle-orm";
+import { auth } from "@/app/(auth)/auth";
+import { metaBusinessAccount, metaAdAccount } from "@/lib/db/schema";
 
-// ================================
-// Graph API Response Types (snake_case)
-// ================================
-
-type GraphApiAdAccount = {
-  id: string;
-  name: string;
-  account_id: string;
-};
-
-type GraphApiAdAccounts = {
-  data: GraphApiAdAccount[];
-  paging: {
-    cursors: {
-      before: string;
-      after: string;
-    };
-  };
-};
-
-type GraphApiPicture = {
-  data: {
-    height: number;
-    is_silhouette: boolean;
-    url: string;
-    width: number;
-  };
-};
-
-type GraphApiMeResponse = {
-  id: string;
-  name: string;
-  adaccounts: GraphApiAdAccounts;
-  picture?: GraphApiPicture;
-};
+// Initialize database connection
+// biome-ignore lint: Forbidden non-null assertion.
+const client = postgres(process.env.POSTGRES_URL!);
+const db = drizzle(client);
 
 // ================================
 // Route Types (camelCase)
@@ -44,26 +16,23 @@ type GraphApiMeResponse = {
 
 export type AdAccount = {
   id: string;
-  name: string;
+  name: string | null;
   accountId: string;
+  adAccountId: string;
+  currency: string | null;
+  timezoneId: string | null;
+  timezoneName: string | null;
+  accountStatus: number | null;
 };
 
-export type AdAccounts = {
-  data: AdAccount[];
-  paging: {
-    cursors: {
-      before: string;
-      after: string;
-    };
-  };
-};
-
-export type GetMeResponse = Partial<{
+export type GetMeResponse = {
   id: string;
-  name: string;
-  adAccounts: AdAccounts;
-  pictureUrl: string;
-}>;
+  facebookUserId: string;
+  name: string | null;
+  pictureUrl: string | null;
+  adAccounts: AdAccount[];
+  tokenExpiresAt: Date | null;
+};
 
 export type GetMeErrorResponse = {
   error: string;
@@ -74,81 +43,107 @@ export type GetMeErrorResponse = {
 /**
  * GET /api/meta-business/marketing/me
  *
- * Fetches information about the authenticated user from Facebook Graph API.
- * Returns user ID, name, ad accounts, and picture URL (when available).
+ * Fetches information about the authenticated user's connected Facebook account
+ * and associated ad accounts from the database.
  *
  * Returns:
- * - id: User ID
+ * - id: Meta Business Account record ID
+ * - facebookUserId: Facebook User ID
  * - name: User name
- * - adAccounts: User's ad accounts with pagination (includes id, name, accountId)
  * - pictureUrl: User's profile picture URL (when available)
+ * - adAccounts: User's ad accounts with details
+ * - tokenExpiresAt: When the access token expires
  */
 export async function GET(
   _request: NextRequest
 ): Promise<NextResponse<GetMeResponse | GetMeErrorResponse>> {
   try {
-    // Get access token from environment variable
-    const accessToken = process.env.TODELETE_ACCESS_TOKEN;
+    // Get the authenticated user from the session
+    const session = await auth();
 
-    if (!accessToken) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         {
-          error: "Access token not configured",
-          message: "TODELETE_ACCESS_TOKEN environment variable is not set",
-          solution: "Set the TODELETE_ACCESS_TOKEN environment variable",
+          error: "Not authenticated",
+          message: "You must be logged in to access this resource",
+          solution: "Please log in and try again",
         },
-        { status: 500 }
+        { status: 401 }
       );
     }
 
-    // Make Graph API request
-    const response = await metaApiCall<GraphApiMeResponse>({
-      domain: "FACEBOOK",
-      method: "GET",
-      path: "me",
-      params: "fields=id,name,adaccounts{id,name,account_id},picture",
-      accessToken,
-    });
+    const userId = session.user.id;
 
-    // Transform response to camelCase
-    const camelCaseResponse: GetMeResponse = {
-      id: response.id,
-      name: response.name,
-      adAccounts: {
-        data: response.adaccounts.data.map((account) => ({
-          id: account.id,
-          name: account.name,
-          accountId: account.account_id,
-        })),
-        paging: {
-          cursors: {
-            before: response.adaccounts.paging.cursors.before,
-            after: response.adaccounts.paging.cursors.after,
-          },
+    // Fetch the user's connected Meta Business Account
+    const metaAccounts = await db
+      .select()
+      .from(metaBusinessAccount)
+      .where(
+        and(
+          eq(metaBusinessAccount.userId, userId),
+          isNull(metaBusinessAccount.deletedAt)
+        )
+      )
+      .limit(1);
+
+    const metaAccountRecord = metaAccounts[0];
+
+    if (!metaAccountRecord) {
+      return NextResponse.json(
+        {
+          error: "No connected account",
+          message: "No Facebook account is connected",
+          solution:
+            "Connect your Facebook account to access marketing features",
         },
-      },
-    };
-
-    // Add picture URL if available and not a silhouette
-    if (response.picture?.data?.url && !response.picture.data.is_silhouette) {
-      camelCaseResponse.pictureUrl = response.picture.data.url;
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(camelCaseResponse, { status: 200 });
-  } catch (error) {
-    // Convert error to standardized GraphErrorReturn format
-    const errorReturn = errorToGraphErrorReturn(error);
+    // Fetch the user's ad accounts
+    const adAccounts = await db
+      .select()
+      .from(metaAdAccount)
+      .where(
+        and(
+          eq(metaAdAccount.metaBusinessAccountId, metaAccountRecord.id),
+          isNull(metaAdAccount.deletedAt)
+        )
+      );
 
-    // Log for debugging
-    console.error("Error fetching user information:", errorReturn);
+    // Transform to response format
+    const response: GetMeResponse = {
+      id: metaAccountRecord.id,
+      facebookUserId: metaAccountRecord.facebookUserId,
+      name: metaAccountRecord.name,
+      pictureUrl: metaAccountRecord.pictureUrl,
+      tokenExpiresAt: metaAccountRecord.tokenExpiresAt,
+      adAccounts: adAccounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        accountId: account.accountId,
+        adAccountId: account.adAccountId,
+        currency: account.currency,
+        timezoneId: account.timezoneId,
+        timezoneName: account.timezoneName,
+        accountStatus: account.accountStatus,
+      })),
+    };
+
+    return NextResponse.json(response, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching user information:", error);
 
     return NextResponse.json(
       {
-        error: errorReturn.reason.title,
-        message: errorReturn.reason.message,
-        solution: errorReturn.reason.solution,
+        error: "Internal server error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        solution: "Please try again later",
       },
-      { status: errorReturn.statusCode }
+      { status: 500 }
     );
   }
 }

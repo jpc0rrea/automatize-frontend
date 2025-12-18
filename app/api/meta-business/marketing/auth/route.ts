@@ -1,36 +1,28 @@
 import { NextResponse } from "next/server";
-
-import { generateAuthUrl } from "@/lib/meta-business/instagram";
+import { generateMarketingAuthUrl } from "@/lib/meta-business/marketing/auth";
 
 /**
- * GET /api/instagram/auth
+ * GET /api/meta-business/marketing/auth
  *
- * Initiates the Instagram Business Login OAuth flow.
- * Redirects the user to Instagram's authorization page.
+ * Initiates the Facebook Login for Business OAuth flow for Marketing API access.
+ * Redirects the user to Facebook's authorization page.
  *
  * Query parameters:
  * - state (optional): A state parameter to maintain state between request and callback
  */
 export async function GET(request: Request) {
-  console.log("TODELETE: /api/instagram/auth GET - Request received");
-  console.log("TODELETE: /api/instagram/auth GET - URL:", request.url);
-
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state") ?? undefined;
 
-    console.log("TODELETE: /api/instagram/auth GET - State parameter:", state);
-
-    const authUrl = generateAuthUrl(state);
-
-    console.log("TODELETE: /api/instagram/auth GET - Redirecting to Instagram");
+    const authUrl = generateMarketingAuthUrl(state);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error("TODELETE: /api/instagram/auth GET - Error:", error);
+    console.error("Error initiating Marketing OAuth:", error);
 
     return NextResponse.json(
-      { error: "Failed to initiate Instagram login. Please try again." },
+      { error: "Failed to initiate Facebook login. Please try again." },
       { status: 500 }
     );
   }
